@@ -37,6 +37,7 @@ build/.cmake/
 # GNU Patch reject file
 *.rej
 
+newworld/
 ## Non-static Minetest directories or symlinks to these
 /bin/
 /games/*
