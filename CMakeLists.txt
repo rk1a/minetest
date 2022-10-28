@@ -276,6 +276,7 @@ endif()
 # Library pack
 find_package(GMP REQUIRED)
 find_package(Json REQUIRED)
+find_package(ZMQPP REQUIRED)
 find_package(Lua REQUIRED)
 if(NOT USE_LUAJIT)
 	set(LUA_BIT_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/lib/bitop)

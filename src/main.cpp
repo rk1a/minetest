@@ -249,8 +249,9 @@ int main(int argc, char *argv[])
 
 	sanity_check(!game_params.world_path.empty());
 
-	if (game_params.is_dedicated_server)
+	if (game_params.is_dedicated_server) {
 		return run_dedicated_server(game_params, cmd_args) ? 0 : 1;
+	}
 
 #ifndef SERVER
 	retval = ClientLauncher().run(game_params, cmd_args) ? 0 : 1;
@@ -376,6 +377,10 @@ static void set_allowed_options(OptionList *allowed_options)
 			_("Disable main menu"))));
 	allowed_options->insert(std::make_pair("console", ValueSpec(VALUETYPE_FLAG,
 		_("Starts with the console (Windows only)"))));
+	allowed_options->insert(std::make_pair("dumb", ValueSpec(VALUETYPE_FLAG,
+			_("Makes this client a dumb client (Not for servers)"))));
+	allowed_options->insert(std::make_pair("dumb-port", ValueSpec(VALUETYPE_STRING,
+			_("Server ZeroMQ port for the dumb client."))));
 #endif
 
 }
