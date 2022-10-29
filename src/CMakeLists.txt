@@ -399,6 +399,7 @@ set(common_SRCS
 	raycast.cpp
 	reflowscan.cpp
 	remoteplayer.cpp
+	rlinterface.cpp
 	rollback.cpp
 	rollback_interface.cpp
 	serialization.cpp
@@ -496,6 +497,8 @@ include_directories(
 include_directories(SYSTEM
 	${ZLIB_INCLUDE_DIR}
 	${ZSTD_INCLUDE_DIR}
+	${ZMQ_INCLUDE_DIR}
+	${ZMQPP_INCLUDE_DIR}
 	${SQLITE3_INCLUDE_DIR}
 	${LUA_INCLUDE_DIR}
 	${GMP_INCLUDE_DIR}
@@ -534,6 +537,8 @@ if(BUILD_CLIENT)
 		${ZLIB_LIBRARIES}
 		IrrlichtMt::IrrlichtMt
 		${ZSTD_LIBRARY}
+		${ZMQ_LIBRARY}
+		${ZMQPP_LIBRARY}
 		${X11_LIBRARIES}
 		${SOUND_LIBRARIES}
 		${SQLITE3_LIBRARY}
