@@ -484,7 +484,7 @@ static bool setup_log_params(const Settings &cmd_args)
 			color_mode = color_mode_env;
 #endif
 	}
-	if (color_mode != "") {
+	if (!color_mode.empty()) {
 		if (color_mode == "auto") {
 			Logger::color_mode = LOG_COLOR_AUTO;
 		} else if (color_mode == "always") {
@@ -527,7 +527,7 @@ static bool create_userdata_path()
 	}
 #else
 	// Create user data directory
-	success = fs::CreateDir(porting::path_user);
+	success = fs::CreateAllDirs(porting::path_user);
 #endif
 
 	return success;
@@ -586,7 +586,7 @@ static void startup_message()
 static bool read_config_file(const Settings &cmd_args)
 {
 	// Path of configuration file in use
-	sanity_check(g_settings_path == "");	// Sanity check
+	sanity_check(g_settings_path.empty());	// Sanity check
 
 	if (cmd_args.exists("config")) {
 		bool r = g_settings->readConfigFile(cmd_args.get("config").c_str());
@@ -793,7 +793,7 @@ static bool auto_select_world(GameParams *game_params)
 		           << world_path << "]" << std::endl;
 	}
 
-	assert(world_path != "");	// Post-condition
+	assert(!world_path.empty());	// Post-condition
 	game_params->world_path = world_path;
 	return true;
 }
@@ -849,7 +849,7 @@ static bool determine_subgame(GameParams *game_params)
 {
 	SubgameSpec gamespec;
 
-	assert(game_params->world_path != "");	// Pre-condition
+	assert(!game_params->world_path.empty());	// Pre-condition
 
 	// If world doesn't exist
 	if (!game_params->world_path.empty()
@@ -1131,14 +1131,16 @@ static bool recompress_map_database(const GameParams &game_params, const Setting
 		iss.str(data);
 		iss.clear();
 
-		MapBlock mb(nullptr, v3s16(0,0,0), &server);
-		u8 ver = readU8(iss);
-		mb.deSerialize(iss, ver, true);
+		{
+			MapBlock mb(nullptr, v3s16(0,0,0), &server);
+			u8 ver = readU8(iss);
+			mb.deSerialize(iss, ver, true);
 
-		oss.str("");
-		oss.clear();
-		writeU8(oss, serialize_as_ver);
-		mb.serialize(oss, serialize_as_ver, true, -1);
+			oss.str("");
+			oss.clear();
+			writeU8(oss, serialize_as_ver);
+			mb.serialize(oss, serialize_as_ver, true, -1);
+		}
 
 		db->saveBlock(*it, oss.str());
 
