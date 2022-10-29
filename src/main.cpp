@@ -380,7 +380,7 @@ static void set_allowed_options(OptionList *allowed_options)
 	allowed_options->insert(std::make_pair("dumb", ValueSpec(VALUETYPE_FLAG,
 			_("Makes this client a dumb client (Not for servers)"))));
 	allowed_options->insert(std::make_pair("dumb-port", ValueSpec(VALUETYPE_STRING,
-			_("Server ZeroMQ port for the dumb client."))));
+			_("ZeroMQ port for the dumb client."))));
 #endif
 
 }

@@ -21,15 +21,19 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #include "irrlichttypes_extrabloated.h"
 #include "client/inputhandler.h"
-// #include <zmqpp/zmqpp.hpp>
+#include <zmqpp/zmqpp.hpp>
 #include <string>
 
 class DumbClientInputHandler : public InputHandler
 {
 public:
-	DumbClientInputHandler(std::string zmq_port) {
-        // client(context, zmqpp::socket_type::pull);
-        // client.connect(zmq_port);
+	DumbClientInputHandler(std::string zmq_port): client(context, zmqpp::socket_type::reply) {
+		try {
+        	client.bind(zmq_port);
+		} catch (zmqpp::zmq_internal_exception &e) {
+			errorstream << "ZeroMQ error: " << e.what() << " (port: " << zmq_port << ")" << std::endl;
+			throw e;
+		};
     };
 
 	virtual bool isKeyDown(GameKeyType k) { return keydown[keycache.key[k]]; }
@@ -51,8 +55,8 @@ public:
 	s32 Rand(s32 min, s32 max);
 
 private:
-    // zmqpp::context context;
-    // zmqpp::client client;
+    zmqpp::context context;
+    zmqpp::socket client;
 	KeyList keydown;
 	v2s32 mousepos;
 	v2s32 mousespeed;

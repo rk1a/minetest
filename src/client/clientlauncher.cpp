@@ -331,7 +331,7 @@ void ClientLauncher::init_args(GameStartData &start_data, const Settings &cmd_ar
 
 	start_data.dumb = cmd_args.getFlag("dumb");
 	if(cmd_args.exists("dumb-port"))
-		start_data.dumb_client_port = cmd_args.getFlag("dumb-port");
+		start_data.dumb_client_port = cmd_args.get("dumb-port");
 	
 	dumb = start_data.isDumbClient();
 	dumb_port = start_data.dumb_client_port;
