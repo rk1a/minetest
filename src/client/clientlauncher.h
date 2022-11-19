@@ -21,6 +21,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #include "irrlichttypes_extrabloated.h"
 #include "client/inputhandler.h"
+#include "client/dumbhandler.h"
 #include "gameparams.h"
 
 class RenderingEngine;
@@ -48,6 +49,8 @@ private:
 
 	bool skip_main_menu = false;
 	bool random_input = false;
+	bool dumb = false;
+	std::string dumb_port = "";
 	RenderingEngine *m_rendering_engine = nullptr;
 	InputHandler *input = nullptr;
 	MyEventReceiver *receiver = nullptr;

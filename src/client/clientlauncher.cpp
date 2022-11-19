@@ -329,6 +329,13 @@ void ClientLauncher::init_args(GameStartData &start_data, const Settings &cmd_ar
 	if (cmd_args.exists("name"))
 		start_data.name = cmd_args.get("name");
 
+	start_data.dumb = cmd_args.getFlag("dumb");
+	if(cmd_args.exists("dumb-port"))
+		start_data.dumb_client_port = cmd_args.get("dumb-port");
+	
+	dumb = start_data.isDumbClient();
+	dumb_port = start_data.dumb_client_port;
+
 	random_input = g_settings->getBool("random_input")
 			|| cmd_args.getFlag("random-input");
 }
@@ -342,7 +349,9 @@ bool ClientLauncher::init_engine()
 
 void ClientLauncher::init_input()
 {
-	if (random_input)
+	if(dumb)
+		input = new DumbClientInputHandler(dumb_port);
+	else if (random_input)
 		input = new RandomInputHandler();
 	else
 		input = new RealInputHandler(receiver);
