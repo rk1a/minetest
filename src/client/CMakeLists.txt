@@ -66,3 +66,5 @@ set(client_SRCS
 	${CMAKE_CURRENT_SOURCE_DIR}/shadows/shadowsScreenQuad.cpp
 	PARENT_SCOPE
 )
+
+# add_custom_target(dumb_protobufs ALL DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/dumb_inputs.pb.cc)

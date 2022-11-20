@@ -18,3 +18,13 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
+#include "dumbhandler.h"
+
+void DumbClientInputHandler::step(float dtime) {
+    zmqpp::message msg;
+    warningstream << "Waiting for ZMQ keyboard..." << std::endl;
+    client.receive(msg);
+    InputEvent event;
+    event.ParseFromArray(msg.raw_data(0), msg.size(0));
+    warningstream << event.mousedx() << std::endl;
+}

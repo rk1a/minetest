@@ -20,6 +20,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #pragma once
 
 #include "irrlichttypes_extrabloated.h"
+#include "client/dumb_inputs.pb.h"
 #include "client/inputhandler.h"
 #include <zmqpp/zmqpp.hpp>
 #include <string>
@@ -47,10 +48,7 @@ public:
 	virtual void setMousePos(s32 x, s32 y) { mousepos = v2s32(x, y); }
 
 	virtual s32 getMouseWheel() { return 0; }
-
-	virtual void step(float dtime) {
-		// TODO
-	};
+	virtual void step(float dtime);
 
 	s32 Rand(s32 min, s32 max);
 
