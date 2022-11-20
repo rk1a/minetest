@@ -411,7 +411,7 @@ public:
 	void showMinimap(bool show = true);
 
 	// sends data out
-	void sendDataOut();
+	std::string getSendableData();
 
 	const Address getServerAddress();
 

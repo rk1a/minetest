@@ -30,6 +30,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "client/tile.h"     // For TextureSource
 #include "client/keys.h"
 #include "client/joystick_controller.h"
+#include "client/recorder.h"
 #include "clientmap.h"
 #include "clouds.h"
 #include "config.h"
@@ -71,6 +72,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "version.h"
 #include "script/scripting_client.h"
 #include "hud.h"
+#include <zmqpp/zmqpp.hpp>
 
 #if USE_SOUND
 	#include "client/sound_openal.h"
@@ -743,6 +745,9 @@ protected:
 			bool *connect_ok, bool *aborted);
 	bool getServerContent(bool *aborted);
 
+	// Recorder creation
+	void createRecorder(const GameStartData &start_data);
+
 	// Main loop
 
 	void updateInteractTimers(f32 dtime);
@@ -889,6 +894,8 @@ private:
 
 	Client *client = nullptr;
 	Server *server = nullptr;
+
+	Recorder *recorder = nullptr;
 
 	IWritableTextureSource *texture_src = nullptr;
 	IWritableShaderSource *shader_src = nullptr;
@@ -1042,6 +1049,8 @@ Game::~Game()
 	delete soundmaker;
 	if (!sound_is_dummy)
 		delete sound;
+	if(recorder)
+		delete recorder;
 
 	delete server; // deleted first to stop all server threads
 
@@ -1129,6 +1138,9 @@ bool Game::startup(bool *kill,
 
 	if (!createClient(start_data))
 		return false;
+
+	if(start_data.isRecording())
+		createRecorder(start_data);
 
 	m_rendering_engine->initialize(client, hud);
 
@@ -1237,6 +1249,10 @@ void Game::run()
 		if (m_does_lost_focus_pause_game && !device->isWindowFocused() && !isMenuActive()) {
 			showPauseMenu();
 		}
+
+		// send data out
+		if(recorder)
+			recorder->sendDataOut(client);
 	}
 }
 
@@ -1502,6 +1518,11 @@ bool Game::createClient(const GameStartData &start_data)
 		client->getScript()->on_minimap_ready(mapper);
 
 	return true;
+}
+
+
+void Game::createRecorder(const GameStartData &start_data) {
+	recorder = new Recorder(start_data.record_port);
 }
 
 bool Game::initGui()

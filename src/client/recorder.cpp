@@ -1,7 +1,6 @@
 /*
 Minetest
 Copyright (C) 2010-2013 celeron55, Perttu Ahola <celeron55@gmail.com>
-Copyright (C) 2017 nerzhul, Loic Blot <loic.blot@unix-experience.fr>
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU Lesser General Public License as published by
@@ -18,16 +17,10 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
-#include "dumbhandler.h"
+#include "client/recorder.h"
 
-void DumbClientInputHandler::step(float dtime) {
-    zmqpp::message msg;
-    warningstream << "Waiting for ZMQ keyboard..." << std::endl;
-    client.receive(msg);
-    InputEvent event;
-    event.ParseFromArray(msg.raw_data(0), msg.size(0));
-    // event.ParseFromIstream(msg);
-    warningstream << event.mousedx() << std::endl;
-    mousespeed = v2s32(event.mousedx(), event.mousedy());
-	mousepos += mousespeed;
+void Recorder::sendDataOut(Client *client) {
+    std::string data = client->getSendableData();
+    warningstream << "Sending data out" << std::endl;
+    sender.send(data);
 }

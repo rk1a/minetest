@@ -1,7 +1,6 @@
 /*
 Minetest
 Copyright (C) 2010-2013 celeron55, Perttu Ahola <celeron55@gmail.com>
-Copyright (C) 2017 nerzhul, Loic Blot <loic.blot@unix-experience.fr>
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU Lesser General Public License as published by
@@ -18,16 +17,28 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
-#include "dumbhandler.h"
+#pragma once
 
-void DumbClientInputHandler::step(float dtime) {
-    zmqpp::message msg;
-    warningstream << "Waiting for ZMQ keyboard..." << std::endl;
-    client.receive(msg);
-    InputEvent event;
-    event.ParseFromArray(msg.raw_data(0), msg.size(0));
-    // event.ParseFromIstream(msg);
-    warningstream << event.mousedx() << std::endl;
-    mousespeed = v2s32(event.mousedx(), event.mousedy());
-	mousepos += mousespeed;
-}
+#include "irrlichttypes_extrabloated.h"
+#include "client/client.h"
+#include <zmqpp/zmqpp.hpp>
+#include <string>
+
+class Recorder
+{
+public:
+	Recorder(std::string zmq_port): sender(context, zmqpp::socket_type::publish) {
+		try {
+        	sender.bind(zmq_port);
+		} catch (zmqpp::zmq_internal_exception &e) {
+			errorstream << "ZeroMQ error: " << e.what() << " (port: " << zmq_port << ")" << std::endl;
+			throw e;
+		};
+    };
+
+    void sendDataOut(Client *client);
+
+private:
+    zmqpp::context context;
+    zmqpp::socket sender;
+};
