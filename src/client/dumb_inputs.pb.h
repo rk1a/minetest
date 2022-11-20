@@ -181,25 +181,25 @@ class InputEvent : public ::google::protobuf::Message /* @@protoc_insertion_poin
   const ::google::protobuf::RepeatedPtrField< ::KeyboardEvent >&
       keyevents() const;
 
-  // float mouseDx = 2;
+  // sint32 mouseDx = 2;
   void clear_mousedx();
   static const int kMouseDxFieldNumber = 2;
-  float mousedx() const;
-  void set_mousedx(float value);
+  ::google::protobuf::int32 mousedx() const;
+  void set_mousedx(::google::protobuf::int32 value);
 
-  // float mouseDy = 3;
+  // sint32 mouseDy = 3;
   void clear_mousedy();
   static const int kMouseDyFieldNumber = 3;
-  float mousedy() const;
-  void set_mousedy(float value);
+  ::google::protobuf::int32 mousedy() const;
+  void set_mousedy(::google::protobuf::int32 value);
 
   // @@protoc_insertion_point(class_scope:InputEvent)
  private:
 
   ::google::protobuf::internal::InternalMetadataWithArena _internal_metadata_;
   ::google::protobuf::RepeatedPtrField< ::KeyboardEvent > keyevents_;
-  float mousedx_;
-  float mousedy_;
+  ::google::protobuf::int32 mousedx_;
+  ::google::protobuf::int32 mousedy_;
   mutable ::google::protobuf::internal::CachedSize _cached_size_;
   friend struct ::protobuf_client_2fdumb_5finputs_2eproto::TableStruct;
 };
@@ -362,29 +362,29 @@ InputEvent::keyevents() const {
   return keyevents_;
 }
 
-// float mouseDx = 2;
+// sint32 mouseDx = 2;
 inline void InputEvent::clear_mousedx() {
   mousedx_ = 0;
 }
-inline float InputEvent::mousedx() const {
+inline ::google::protobuf::int32 InputEvent::mousedx() const {
   // @@protoc_insertion_point(field_get:InputEvent.mouseDx)
   return mousedx_;
 }
-inline void InputEvent::set_mousedx(float value) {
+inline void InputEvent::set_mousedx(::google::protobuf::int32 value) {
   
   mousedx_ = value;
   // @@protoc_insertion_point(field_set:InputEvent.mouseDx)
 }
 
-// float mouseDy = 3;
+// sint32 mouseDy = 3;
 inline void InputEvent::clear_mousedy() {
   mousedy_ = 0;
 }
-inline float InputEvent::mousedy() const {
+inline ::google::protobuf::int32 InputEvent::mousedy() const {
   // @@protoc_insertion_point(field_get:InputEvent.mouseDy)
   return mousedy_;
 }
-inline void InputEvent::set_mousedy(float value) {
+inline void InputEvent::set_mousedy(::google::protobuf::int32 value) {
   
   mousedy_ = value;
   // @@protoc_insertion_point(field_set:InputEvent.mouseDy)

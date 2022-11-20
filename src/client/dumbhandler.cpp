@@ -27,4 +27,6 @@ void DumbClientInputHandler::step(float dtime) {
     InputEvent event;
     event.ParseFromArray(msg.raw_data(0), msg.size(0));
     warningstream << event.mousedx() << std::endl;
+    mousespeed = v2s32(event.mousedx(), event.mousedy());
+	mousepos += mousespeed;
 }

@@ -120,7 +120,7 @@ void AddDescriptorsImpl() {
   static const char descriptor[] GOOGLE_PROTOBUF_ATTRIBUTE_SECTION_VARIABLE(protodesc_cold) = {
       "\n\030client/dumb_inputs.proto\"Q\n\nInputEvent"
       "\022!\n\tkeyEvents\030\001 \003(\0132\016.KeyboardEvent\022\017\n\007m"
-      "ouseDx\030\002 \001(\002\022\017\n\007mouseDy\030\003 \001(\002\";\n\rKeyboar"
+      "ouseDx\030\002 \001(\021\022\017\n\007mouseDy\030\003 \001(\021\";\n\rKeyboar"
       "dEvent\022\013\n\003key\030\001 \001(\t\022\035\n\teventType\030\002 \001(\0162\n"
       ".EventType*#\n\tEventType\022\t\n\005PRESS\020\000\022\013\n\007RE"
       "LEASE\020\001b\006proto3"
@@ -248,13 +248,13 @@ bool InputEvent::MergePartialFromCodedStream(
         break;
       }
 
-      // float mouseDx = 2;
+      // sint32 mouseDx = 2;
       case 2: {
         if (static_cast< ::google::protobuf::uint8>(tag) ==
-            static_cast< ::google::protobuf::uint8>(21u /* 21 & 0xFF */)) {
+            static_cast< ::google::protobuf::uint8>(16u /* 16 & 0xFF */)) {
 
           DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
-                   float, ::google::protobuf::internal::WireFormatLite::TYPE_FLOAT>(
+                   ::google::protobuf::int32, ::google::protobuf::internal::WireFormatLite::TYPE_SINT32>(
                  input, &mousedx_)));
         } else {
           goto handle_unusual;
@@ -262,13 +262,13 @@ bool InputEvent::MergePartialFromCodedStream(
         break;
       }
 
-      // float mouseDy = 3;
+      // sint32 mouseDy = 3;
       case 3: {
         if (static_cast< ::google::protobuf::uint8>(tag) ==
-            static_cast< ::google::protobuf::uint8>(29u /* 29 & 0xFF */)) {
+            static_cast< ::google::protobuf::uint8>(24u /* 24 & 0xFF */)) {
 
           DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
-                   float, ::google::protobuf::internal::WireFormatLite::TYPE_FLOAT>(
+                   ::google::protobuf::int32, ::google::protobuf::internal::WireFormatLite::TYPE_SINT32>(
                  input, &mousedy_)));
         } else {
           goto handle_unusual;
@@ -311,14 +311,14 @@ void InputEvent::SerializeWithCachedSizes(
       output);
   }
 
-  // float mouseDx = 2;
+  // sint32 mouseDx = 2;
   if (this->mousedx() != 0) {
-    ::google::protobuf::internal::WireFormatLite::WriteFloat(2, this->mousedx(), output);
+    ::google::protobuf::internal::WireFormatLite::WriteSInt32(2, this->mousedx(), output);
   }
 
-  // float mouseDy = 3;
+  // sint32 mouseDy = 3;
   if (this->mousedy() != 0) {
-    ::google::protobuf::internal::WireFormatLite::WriteFloat(3, this->mousedy(), output);
+    ::google::protobuf::internal::WireFormatLite::WriteSInt32(3, this->mousedy(), output);
   }
 
   if ((_internal_metadata_.have_unknown_fields() &&  ::google::protobuf::internal::GetProto3PreserveUnknownsDefault())) {
@@ -343,14 +343,14 @@ void InputEvent::SerializeWithCachedSizes(
         1, this->keyevents(static_cast<int>(i)), deterministic, target);
   }
 
-  // float mouseDx = 2;
+  // sint32 mouseDx = 2;
   if (this->mousedx() != 0) {
-    target = ::google::protobuf::internal::WireFormatLite::WriteFloatToArray(2, this->mousedx(), target);
+    target = ::google::protobuf::internal::WireFormatLite::WriteSInt32ToArray(2, this->mousedx(), target);
   }
 
-  // float mouseDy = 3;
+  // sint32 mouseDy = 3;
   if (this->mousedy() != 0) {
-    target = ::google::protobuf::internal::WireFormatLite::WriteFloatToArray(3, this->mousedy(), target);
+    target = ::google::protobuf::internal::WireFormatLite::WriteSInt32ToArray(3, this->mousedy(), target);
   }
 
   if ((_internal_metadata_.have_unknown_fields() &&  ::google::protobuf::internal::GetProto3PreserveUnknownsDefault())) {
@@ -381,14 +381,18 @@ size_t InputEvent::ByteSizeLong() const {
     }
   }
 
-  // float mouseDx = 2;
+  // sint32 mouseDx = 2;
   if (this->mousedx() != 0) {
-    total_size += 1 + 4;
+    total_size += 1 +
+      ::google::protobuf::internal::WireFormatLite::SInt32Size(
+        this->mousedx());
   }
 
-  // float mouseDy = 3;
+  // sint32 mouseDy = 3;
   if (this->mousedy() != 0) {
-    total_size += 1 + 4;
+    total_size += 1 +
+      ::google::protobuf::internal::WireFormatLite::SInt32Size(
+        this->mousedy());
   }
 
   int cached_size = ::google::protobuf::internal::ToCachedSize(total_size);

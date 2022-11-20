@@ -2,8 +2,8 @@ syntax = "proto3";
 
 message InputEvent {
     repeated KeyboardEvent keyEvents = 1;
-    float mouseDx = 2;
-    float mouseDy = 3;
+    sint32 mouseDx = 2;
+    sint32 mouseDy = 3;
 }
 
 // // This was auto-generated
