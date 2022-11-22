@@ -27,14 +27,19 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 class DumbClientInputHandler : public InputHandler
 {
 public:
-	DumbClientInputHandler(std::string zmq_port): client(context, zmqpp::socket_type::reply) {
+	DumbClientInputHandler(std::string zmq_port) :
+			client(context, zmqpp::socket_type::request)
+	{
+		std::string address = std::string("tcp://127.0.0.1:") + zmq_port;
+		std::cout << "Try to connect to: " << address << std::endl;
 		try {
-        	client.bind(zmq_port);
+			client.connect(address);
 		} catch (zmqpp::zmq_internal_exception &e) {
-			errorstream << "ZeroMQ error: " << e.what() << " (port: " << zmq_port << ")" << std::endl;
+			errorstream << "ZeroMQ error: " << e.what() << " (port: " << zmq_port << ")"
+						<< std::endl;
 			throw e;
 		};
-    };
+	};
 
 	virtual bool isKeyDown(GameKeyType k) { return keydown[keycache.key[k]]; }
 	virtual bool wasKeyDown(GameKeyType k) { return false; }
@@ -48,15 +53,23 @@ public:
 
 	virtual s32 getMouseWheel() { return 0; }
 
-	virtual void step(float dtime) {
-		// TODO
+	virtual void step(float dtime)
+	{
+		zmqpp::message obs;
+		obs << "0";
+		client.send(obs);
+		zmqpp::message action;
+		bool success = client.receive(action);
+		if (action.get(0) == "1") {
+			keydown.toggle(getKeySetting("keymap_jump"));
+		}
 	};
 
 	s32 Rand(s32 min, s32 max);
 
 private:
-    zmqpp::context context;
-    zmqpp::socket client;
+	zmqpp::context context;
+	zmqpp::socket client;
 	KeyList keydown;
 	v2s32 mousepos;
 	v2s32 mousespeed;
