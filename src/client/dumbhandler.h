@@ -45,7 +45,6 @@ public:
 	virtual bool isKeyDown(GameKeyType k) { return keyIsDown[keycache.key[k]]; }
 	virtual bool wasKeyDown(GameKeyType k)
 	{
-		// TODO for some reason this caused mouse and keyboard input on
 		bool b = keyWasDown[keycache.key[k]];
 		if (b)
 			keyWasDown.unset(keycache.key[k]);
@@ -70,7 +69,7 @@ public:
 				return 0.0f;
 			return 1.0f; // If there is a keyboard event, assume maximum speed
 		}
-		return 0.0f; // TODO maybe we should return movementSpeed here?
+		return 0.0f;
 	}
 	virtual float getMovementDirection()
 	{
@@ -183,9 +182,6 @@ public:
 						e.KeyInput.PressedDown = true;
 					}
 					simulateEvent(e);
-					// m_receiver->m_input_blocked = false;
-					// m_receiver->OnEvent(e);
-					// m_receiver->m_input_blocked = true;
 				}
 			} else {
 				if (keyIsDown[keyCode])
