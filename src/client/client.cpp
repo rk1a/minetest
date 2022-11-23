@@ -1888,6 +1888,25 @@ void Client::makeScreenshot()
 	raw_image->drop();
 }
 
+std::string Client::getSendableData() {
+	irr::video::IVideoDriver *driver = m_rendering_engine->get_video_driver();
+	irr::video::IImage* const raw_image = driver->createScreenShot();
+
+	if (!raw_image)
+		return "";
+
+	irr::video::IImage* const image =
+			driver->createImage(video::ECF_R8G8B8, raw_image->getDimension());
+	raw_image->copyTo(image);
+	raw_image->drop();
+	
+	auto dim = image->getDimension();
+	// warningstream << "Got data; format: " << image->getColorFormat() << "; width: " << dim.Width << ", height: " << dim.Height << std::endl;
+	std::string data = std::string((char*)image->getData(), image->getImageDataSizeInBytes());
+	image->drop();
+	return data;
+}
+
 bool Client::shouldShowMinimap() const
 {
 	return !m_minimap_disabled_by_server;
