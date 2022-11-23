@@ -22,12 +22,45 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 void DumbClientInputHandler::step(float dtime) {
     zmqpp::message msg;
-    warningstream << "Waiting for ZMQ keyboard..." << std::endl;
+    warningstream << "Waiting for ZMQ commands..." << std::endl;
     client.receive(msg);
     InputEvent event;
     event.ParseFromArray(msg.raw_data(0), msg.size(0));
     // event.ParseFromIstream(msg);
     warningstream << event.mousedx() << std::endl;
+
     mousespeed = v2s32(event.mousedx(), event.mousedy());
 	mousepos += mousespeed;
+
+    for(int i = 0; i < event.keyevents_size(); i++) {
+        KeyboardEvent ke = event.keyevents(i);
+        KeyPress key = getKeySetting(ke.key().c_str());
+		switch(ke.eventtype()) {
+        	case PRESS:
+                keydown.set(key);
+                break;
+            case RELEASE:
+                keydown.unset(key);
+                break;
+            default:
+                break;
+        }
+    }
+
+    bool f = keydown[keycache.key[KeyType::FORWARD]],
+        l = keydown[keycache.key[KeyType::LEFT]];
+    if (f || l) {
+        movementSpeed = 1.0f;
+        if (f && !l)
+            movementDirection = 0.0;
+        else if (!f && l)
+            movementDirection = -M_PI_2;
+        else if (f && l)
+            movementDirection = -M_PI_4;
+        else
+            movementDirection = 0.0;
+    } else {
+        movementSpeed = 0.0;
+        movementDirection = 0.0;
+    }
 }

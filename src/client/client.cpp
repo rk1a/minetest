@@ -1901,7 +1901,7 @@ std::string Client::getSendableData() {
 	raw_image->drop();
 	
 	auto dim = image->getDimension();
-	warningstream << "Got data; format: " << image->getColorFormat() << "; width: " << dim.Width << ", height: " << dim.Height << std::endl;
+	// warningstream << "Got data; format: " << image->getColorFormat() << "; width: " << dim.Width << ", height: " << dim.Height << std::endl;
 	std::string data = std::string((char*)image->getData(), image->getImageDataSizeInBytes());
 	image->drop();
 	return data;

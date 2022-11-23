@@ -19,7 +19,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #pragma once
 
-#include "irrlichttypes_extrabloated.h"
+#include "client/inputhandler.h"
 #include "client/client.h"
 #include <zmqpp/zmqpp.hpp>
 #include <string>
@@ -36,7 +36,7 @@ public:
 		};
     };
 
-    void sendDataOut(Client *client);
+    void sendDataOut(Client *client, InputHandler *input);
 
 private:
     zmqpp::context context;

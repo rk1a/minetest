@@ -1251,8 +1251,11 @@ void Game::run()
 		}
 
 		// send data out
+		std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
 		if(recorder)
-			recorder->sendDataOut(client);
+			recorder->sendDataOut(client, input);
+		std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+		warningstream << "Time difference = " << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() << "[µs]" << std::endl;
 	}
 }
 

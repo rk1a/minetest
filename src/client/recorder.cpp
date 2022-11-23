@@ -19,8 +19,9 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #include "client/recorder.h"
 
-void Recorder::sendDataOut(Client *client) {
+void Recorder::sendDataOut(Client *client, InputHandler *input) {
+    // TODO replace with protobuf
     std::string data = client->getSendableData();
-    warningstream << "Sending data out" << std::endl;
+    // warningstream << "Sending data out" << std::endl;
     sender.send(data);
 }
