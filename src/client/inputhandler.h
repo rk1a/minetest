@@ -201,6 +201,8 @@ public:
 	TouchScreenGUI *m_touchscreengui;
 #endif
 
+	bool m_input_blocked = false;
+
 private:
 	s32 mouse_wheel = 0;
 
@@ -304,9 +306,9 @@ public:
 	virtual float getMovementSpeed()
 	{
 		bool f = m_receiver->IsKeyDown(keycache.key[KeyType::FORWARD]),
-			b = m_receiver->IsKeyDown(keycache.key[KeyType::BACKWARD]),
-			l = m_receiver->IsKeyDown(keycache.key[KeyType::LEFT]),
-			r = m_receiver->IsKeyDown(keycache.key[KeyType::RIGHT]);
+			 b = m_receiver->IsKeyDown(keycache.key[KeyType::BACKWARD]),
+			 l = m_receiver->IsKeyDown(keycache.key[KeyType::LEFT]),
+			 r = m_receiver->IsKeyDown(keycache.key[KeyType::RIGHT]);
 		if (f || b || l || r)
 		{
 			// if contradictory keys pressed, stay still
