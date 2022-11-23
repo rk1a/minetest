@@ -54,6 +54,7 @@ set(client_SRCS
 	${CMAKE_CURRENT_SOURCE_DIR}/mesh.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/mesh_generator_thread.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/minimap.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/recorder.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/particles.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/renderingengine.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/shader.cpp
@@ -66,3 +67,5 @@ set(client_SRCS
 	${CMAKE_CURRENT_SOURCE_DIR}/shadows/shadowsScreenQuad.cpp
 	PARENT_SCOPE
 )
+
+# add_custom_target(dumb_protobufs ALL DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/dumb_inputs.pb.cc)

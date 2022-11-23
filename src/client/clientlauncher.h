@@ -51,6 +51,8 @@ private:
 	bool random_input = false;
 	bool dumb = false;
 	std::string dumb_port = "";
+	bool record = false;
+	std::string record_port = "";
 	RenderingEngine *m_rendering_engine = nullptr;
 	InputHandler *input = nullptr;
 	MyEventReceiver *receiver = nullptr;

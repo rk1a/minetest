@@ -45,12 +45,14 @@ newworld/
 /cache
 /textures/*
 !/textures/base/
+!/textures/texture_packs_here.txt
 /screenshots
 /sounds
 /mods/*
 !/mods/minetest/
 /mods/minetest/*
 !/mods/minetest/mods_here.txt
+!/mods/mods_here.txt
 /worlds
 /world/
 /clientmods/*
@@ -58,7 +60,7 @@ newworld/
 /client/mod_storage/
 
 ## Configuration/log files
-minetest.conf
+# minetest.conf
 debug.txt
 debug.txt.1
 

@@ -410,6 +410,9 @@ public:
 
 	void showMinimap(bool show = true);
 
+	// sends data out
+	std::string getSendableData();
+
 	const Address getServerAddress();
 
 	const std::string &getAddressName() const
