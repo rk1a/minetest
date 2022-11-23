@@ -21,6 +21,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "dumbhandler.h"
 
 void DumbClientInputHandler::step(float dtime) {
+    // deprecated
     zmqpp::message msg;
     warningstream << "Waiting for ZMQ commands..." << std::endl;
     client.receive(msg);
