@@ -357,8 +357,8 @@ bool ClientLauncher::init_engine()
 
 void ClientLauncher::init_input()
 {
-	if(dumb)
-		input = new DumbClientInputHandler(dumb_port);
+	if (dumb)
+		input = new DumbClientInputHandler(receiver, dumb_port);
 	else if (random_input)
 		input = new RandomInputHandler();
 	else

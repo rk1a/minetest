@@ -98,6 +98,10 @@ void KeyCache::populate()
 
 bool MyEventReceiver::OnEvent(const SEvent &event)
 {
+	// this enables blocking external inputs
+	if (m_input_blocked) {
+		return true;
+	}
 	/*
 		React to nothing here if a menu is active
 	*/
@@ -107,6 +111,19 @@ bool MyEventReceiver::OnEvent(const SEvent &event)
 			m_touchscreengui->Toggle(false);
 		}
 #endif
+		/*
+		if (event.EventType == irr::EET_KEY_INPUT_EVENT) {
+			std::cout << "key " << event.KeyInput.Key << " pressed? "
+					  << event.KeyInput.PressedDown << " char " << event.KeyInput.Char
+					  << " control " << event.KeyInput.Control << " system "
+					  << event.KeyInput.SystemKeyCode << std::endl;
+		} else if (event.EventType == irr::EET_MOUSE_INPUT_EVENT) {
+			std::cout << "Mouse " << event.MouseInput.X << std::endl;
+		} else if (event.EventType == irr::EET_GUI_EVENT) {
+			std::cout << "GUI EventType " << event.GUIEvent.EventType << std::endl;
+		} else {
+			std::cout << "EventType " << event.EventType << std::endl;
+		}*/
 		return g_menumgr.preprocessEvent(event);
 	}
 

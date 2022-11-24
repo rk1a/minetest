@@ -201,6 +201,8 @@ public:
 	TouchScreenGUI *m_touchscreengui;
 #endif
 
+	bool m_input_blocked = false;
+
 private:
 	s32 mouse_wheel = 0;
 
