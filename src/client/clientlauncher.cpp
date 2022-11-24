@@ -472,11 +472,11 @@ bool ClientLauncher::launch_game(std::string &error_message,
 		server_name = menudata.servername;
 		server_description = menudata.serverdescription;
 
-		start_data.local_server = !start_data.world_path.empty() &&
-			start_data.address.empty() && !start_data.name.empty();
+		start_data.local_server = !menudata.simple_singleplayer_mode &&
+			start_data.address.empty();
 	} else {
 		start_data.local_server = !start_data.world_path.empty() &&
-								  start_data.address.empty() && !start_data.name.empty();
+			start_data.address.empty() && !start_data.name.empty();
 	}
 
 	if (!m_rendering_engine->run())
