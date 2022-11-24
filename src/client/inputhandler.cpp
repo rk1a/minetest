@@ -276,7 +276,7 @@ void RandomInputHandler::step(float dtime)
 		}
 	} else {
 		bool f = keydown[keycache.key[KeyType::FORWARD]],
-			 l = keydown[keycache.key[KeyType::LEFT]];
+			l = keydown[keycache.key[KeyType::LEFT]];
 		if (f || l) {
 			movementSpeed = 1.0f;
 			if (f && !l)
