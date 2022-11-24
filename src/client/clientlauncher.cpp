@@ -36,7 +36,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "network/networkexceptions.h"
 
 #if USE_SOUND
-    #include "sound_openal.h"
+	#include "sound_openal.h"
 #endif
 
 /* mainmenumanager.h
@@ -87,12 +87,12 @@ ClientLauncher::~ClientLauncher()
 
 bool ClientLauncher::run(GameStartData &start_data, const Settings &cmd_args)
 {
-    /* This function is called when a client must be started.
-    * Covered cases:
-    *   - Singleplayer (address but map provided)
-    *   - Join server (no map but address provided)
-    *   - Local server (for main menu only)
-    */
+	/* This function is called when a client must be started.
+	 * Covered cases:
+	 *   - Singleplayer (address but map provided)
+	 *   - Join server (no map but address provided)
+	 *   - Local server (for main menu only)
+	*/
 
 	init_args(start_data, cmd_args);
 
@@ -332,7 +332,7 @@ void ClientLauncher::init_args(GameStartData &start_data, const Settings &cmd_ar
 	start_data.dumb = cmd_args.getFlag("dumb");
 	if(cmd_args.exists("dumb-port"))
 		start_data.dumb_client_port = cmd_args.get("dumb-port");
-    
+	
 	dumb = start_data.isDumbClient();
 	dumb_port = start_data.dumb_client_port;
 
