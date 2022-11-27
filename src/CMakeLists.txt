@@ -198,24 +198,24 @@ endif(ENABLE_REDIS)
 find_package(SQLite3 REQUIRED)
 
 
-find_package(Protobuf REQUIRED)
-include_directories(${Protobuf_INCLUDE_DIRS})
-get_filename_component(PROTO_PARENT ${PROJECT_SOURCE_DIR}/.. ABSOLUTE)
-file(GLOB PROTO_FILES ${PROTO_PARENT}/proto/**/*.proto)
-foreach(file ${PROTO_FILES})
-	get_filename_component(basename ${file} NAME_WLE)
-	get_filename_component(directory ${file} DIRECTORY)
-	get_filename_component(truename ${directory}/${basename} ABSOLUTE)
-	file(RELATIVE_PATH relname ${PROTO_PARENT}/proto ${truename})
-	set(outnames ${PROJECT_SOURCE_DIR}/${relname}.pb.h ${PROJECT_SOURCE_DIR}/${relname}.pb.cc)
-	add_custom_command(OUTPUT ${outnames}
-	                   COMMAND protobuf::protoc
-					   ARGS --cpp_out=. --proto_path ${PROTO_PARENT}/proto ${file}
-					   DEPENDS ${file}
-					   COMMENT protobuf ${file})
-	set(proto_targets ${proto_targets} ${outnames})
+#find_package(Protobuf REQUIRED)
+#include_directories(${Protobuf_INCLUDE_DIRS})
+#get_filename_component(PROTO_PARENT ${PROJECT_SOURCE_DIR}/.. ABSOLUTE)
+#file(GLOB PROTO_FILES ${PROTO_PARENT}/proto/**/*.proto)
+#foreach(file ${PROTO_FILES})
+#	get_filename_component(basename ${file} NAME_WLE)
+#	get_filename_component(directory ${file} DIRECTORY)
+	#get_filename_component(truename ${directory}/${basename} ABSOLUTE)
+#	file(RELATIVE_PATH relname ${PROTO_PARENT}/proto ${truename})
+#	set(outnames ${PROJECT_SOURCE_DIR}/${relname}.pb.h ${PROJECT_SOURCE_DIR}/${relname}.pb.cc)
+#	add_custom_command(OUTPUT ${outnames}
+#	                   COMMAND protobuf::protoc
+#					   ARGS --cpp_out=. --proto_path ${PROTO_PARENT}/proto ${file}
+#					   DEPENDS ${file}
+#					   COMMENT protobuf ${file})
+#	set(proto_targets ${proto_targets} ${outnames})
 	# add_executable(${truename}.pb.cc)
-endforeach()
+#endforeach()
 # add_custom_target(protobufs ALL DEPENDS ${proto_targets})
 
 
@@ -569,7 +569,7 @@ if(BUILD_CLIENT)
 		${LUA_BIT_LIBRARY}
 		${FREETYPE_LIBRARY}
 		${PLATFORM_LIBS}
-		${Protobuf_LIBRARIES}
+#		${Protobuf_LIBRARIES}
 	)
 	if(NOT USE_LUAJIT)
 		set_target_properties(${PROJECT_NAME} PROPERTIES
@@ -639,7 +639,7 @@ if(BUILD_SERVER)
 		${LUA_BIT_LIBRARY}
 		${GMP_LIBRARY}
 		${PLATFORM_LIBS}
-		${Protobuf_LIBRARIES}
+#		${Protobuf_LIBRARIES}
 	)
 	set_target_properties(${PROJECT_NAME}server PROPERTIES
 		COMPILE_DEFINITIONS "SERVER")
