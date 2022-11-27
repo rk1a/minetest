@@ -411,7 +411,7 @@ public:
 	void showMinimap(bool show = true);
 
 	// sends data out
-	std::string getSendableData();
+	std::string getSendableData(core::position2di cursorPosition, bool isMenuActive, irr::video::IImage* cursorImage);
 
 	const Address getServerAddress();
 

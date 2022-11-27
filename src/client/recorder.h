@@ -27,18 +27,21 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 class Recorder
 {
 public:
-	Recorder(std::string zmq_port): sender(context, zmqpp::socket_type::publish) {
+	Recorder(std::string zmq_port) //:sender(context, zmqpp::socket_type::publish) 
+	{
+		/*
 		try {
         	sender.bind(zmq_port);
 		} catch (zmqpp::zmq_internal_exception &e) {
 			errorstream << "ZeroMQ error: " << e.what() << " (port: " << zmq_port << ")" << std::endl;
 			throw e;
-		};
+		};*/
     };
 
-    void sendDataOut(Client *client, InputHandler *input);
+    void sendDataOut(bool isMenuActive, irr::video::IImage* cursorImage, Client *client, InputHandler *input);
+
+    zmqpp::socket *sender = nullptr;
 
 private:
     zmqpp::context context;
-    zmqpp::socket sender;
 };

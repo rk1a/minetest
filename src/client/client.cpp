@@ -39,6 +39,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "util/string.h"
 #include "util/srp.h"
 #include "filesys.h"
+#include "IImage.h"
 #include "mapblock_mesh.h"
 #include "mapblock.h"
 #include "minimap.h"
@@ -59,6 +60,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "chatmessage.h"
 #include "translation.h"
 #include "content/mod_configuration.h"
+#include "SColor.h"
+//#include "client/clientlauncher.h"
 
 extern gui::IGUIEnvironment* guienv;
 
@@ -1888,7 +1891,7 @@ void Client::makeScreenshot()
 	raw_image->drop();
 }
 
-std::string Client::getSendableData() {
+std::string Client::getSendableData(core::position2di cursorPosition, bool isMenuActive, irr::video::IImage* cursorImage) {
 	irr::video::IVideoDriver *driver = m_rendering_engine->get_video_driver();
 	irr::video::IImage* const raw_image = driver->createScreenShot();
 
@@ -1899,6 +1902,13 @@ std::string Client::getSendableData() {
 			driver->createImage(video::ECF_R8G8B8, raw_image->getDimension());
 	raw_image->copyTo(image);
 	raw_image->drop();
+
+	// if provided draw the cursor image at the current mouse position when GUI is open
+	if (isMenuActive && cursorImage) {
+		const core::recti sourceRect = core::recti(core::vector2di(0, 0), cursorImage->getDimension());
+		const irr::video::SColor color = irr::video::SColor(255, 255, 255, 255);
+		cursorImage->copyToWithAlpha(image, cursorPosition, sourceRect, color, nullptr, true);
+	}
 	
 	auto dim = image->getDimension();
 	// warningstream << "Got data; format: " << image->getColorFormat() << "; width: " << dim.Width << ", height: " << dim.Height << std::endl;

@@ -385,6 +385,12 @@ static void set_allowed_options(OptionList *allowed_options)
 			_("Makes this client a recording client (Not for servers)"))));
 	allowed_options->insert(std::make_pair("record-port", ValueSpec(VALUETYPE_STRING,
 			_("ZeroMQ port for the recording client."))));
+	allowed_options->insert(std::make_pair("noresizing", ValueSpec(VALUETYPE_FLAG,
+			_("Disallow screen resizing."))));
+	allowed_options->insert(std::make_pair("cursor-image", ValueSpec(VALUETYPE_STRING,
+			_("Path to the cursor image file."))));
+
+
 #endif
 
 }
