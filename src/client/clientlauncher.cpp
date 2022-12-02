@@ -36,7 +36,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "network/networkexceptions.h"
 
 #if USE_SOUND
-#include "sound_openal.h"
+	#include "sound_openal.h"
 #endif
 
 /* mainmenumanager.h
@@ -92,7 +92,7 @@ bool ClientLauncher::run(GameStartData &start_data, const Settings &cmd_args)
 	 *   - Singleplayer (address but map provided)
 	 *   - Join server (no map but address provided)
 	 *   - Local server (for main menu only)
-	 */
+	*/
 
 	init_args(start_data, cmd_args);
 
@@ -481,7 +481,7 @@ bool ClientLauncher::launch_game(std::string &error_message,
 			start_data.address.empty();
 	} else {
 		start_data.local_server = !start_data.world_path.empty() &&
-								  start_data.address.empty() && !start_data.name.empty();
+			start_data.address.empty() && !start_data.name.empty();
 	}
 
 	if (!m_rendering_engine->run())
@@ -517,7 +517,7 @@ bool ClientLauncher::launch_game(std::string &error_message,
 		// For singleplayer and local server
 		if (worldspec.path.empty()) {
 			error_message = gettext("No world selected and no address "
-									"provided. Nothing to do.");
+					"provided. Nothing to do.");
 			errorstream << error_message << std::endl;
 			return false;
 		}
@@ -619,7 +619,7 @@ void ClientLauncher::speed_tests()
 	}
 
 	infostream << "All of the following tests should take around 100ms each."
-			   << std::endl;
+	           << std::endl;
 
 	{
 		TimeTaker timer("Testing floating-point conversion speed");
