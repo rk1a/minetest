@@ -330,11 +330,11 @@ void ClientLauncher::init_args(GameStartData &start_data, const Settings &cmd_ar
 		start_data.name = cmd_args.get("name");
 
 	start_data.dumb = cmd_args.getFlag("dumb");
-	if(cmd_args.exists("dumb-port"))
-		start_data.dumb_client_port = cmd_args.get("dumb-port");
+	if(cmd_args.exists("client-address"))
+		start_data.client_address = cmd_args.get("client-address");
 
 	dumb = start_data.isDumbClient();
-	dumb_port = start_data.dumb_client_port;
+	client_address = start_data.client_address;
 
 	// copy-paste for now, the logic will probably diverge later
 	start_data.record = cmd_args.getFlag("record");
@@ -363,7 +363,7 @@ bool ClientLauncher::init_engine()
 void ClientLauncher::init_input()
 {
 	if (dumb)
-		input = new DumbClientInputHandler(receiver, dumb_port);
+		input = new DumbClientInputHandler(receiver);
 	else if (random_input)
 		input = new RandomInputHandler();
 	else

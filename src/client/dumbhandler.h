@@ -22,7 +22,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "client/client.h"
 #include "client/renderingengine.h"
 #include "client/dumb_inputs.pb.h"
-//#include "irrlichttypes_extrabloated.h"
 #include "client/inputhandler.h"
 #include "gui/mainmenumanager.h"
 #include <zmqpp/zmqpp.hpp>
@@ -31,18 +30,9 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 class DumbClientInputHandler : public InputHandler
 {
 public:
-	DumbClientInputHandler(MyEventReceiver *receiver, std::string zmq_port) :
+	DumbClientInputHandler(MyEventReceiver *receiver) :
 			m_receiver(receiver)
-	{	
-		/*std::string address = std::string("tcp://127.0.0.1:") + zmq_port;
-		std::cout << "Try to connect to: " << address << std::endl;
-		try {
-			client.connect(address);
-		} catch (zmqpp::zmq_internal_exception &e) {
-			errorstream << "ZeroMQ error: " << e.what() << " (port: " << zmq_port << ")"
-						<< std::endl;
-			throw e;
-		};*/
+	{
 	};
 
 	virtual bool isKeyDown(GameKeyType k) { return keyIsDown[keycache.key[k]]; }
@@ -175,14 +165,12 @@ public:
 			"screenshot",
 	};
 
+	// ZMQ socket
 	zmqpp::socket *socket;
 
 private:
 	// Event receiver to simulate events
 	MyEventReceiver *m_receiver = nullptr;
-
-	// ZMQ objects
-	zmqpp::context context;
 
 	// Whether a GUI (inventory/menu) was open
 	bool wasGuiOpen = false;
