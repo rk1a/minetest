@@ -38,9 +38,9 @@ build/.cmake/
 *.rej
 
 # Protobuf
-dumb_inputs.pb.cc
-dumb_inputs.pb.h
-dumb_inputs_pb2.py
+**/*.pb.cc
+**/*.pb.h
+**/*_pb2.py
 
 # Python
 **/__pycache__/
