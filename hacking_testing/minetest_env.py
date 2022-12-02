@@ -2,8 +2,8 @@ import gym
 import matplotlib.pyplot as plt
 import numpy as np
 import zmq
-from proto_python.client import dumb_inputs_pb2 as dumb_inputs
 from gym.spaces import Box, Dict, Discrete
+from proto_python.client import dumb_inputs_pb2 as dumb_inputs
 
 # TODO read from the minetest.conf file
 DISPLAY_SIZE = (1024, 600)
@@ -102,7 +102,11 @@ class Minetest(gym.Env):
         for key, v in action.items():
             if key == "mouse":
                 continue
-            pb_action.keyEvents.append(dumb_inputs.KeyboardEvent(key=key, eventType=dumb_inputs.PRESS if v else dumb_inputs.RELEASE))
+            pb_action.keyEvents.append(
+                dumb_inputs.KeyboardEvent(
+                    key=key, eventType=dumb_inputs.PRESS if v else dumb_inputs.RELEASE,
+                ),
+            )
 
         print("Sending action: {}".format(action))
         self.socket.send(pb_action.SerializeToString())
@@ -136,7 +140,8 @@ class Minetest(gym.Env):
                 plt.rcParams["figure.autolayout"] = True
 
                 self.render_fig = plt.figure(
-                    num="Minetest", figsize=(3 * DISPLAY_SIZE[0] / DISPLAY_SIZE[1], 3),
+                    num="Minetest",
+                    figsize=(3 * DISPLAY_SIZE[0] / DISPLAY_SIZE[1], 3),
                 )
                 self.render_img = self.render_fig.gca().imshow(
                     self.last_obs,
