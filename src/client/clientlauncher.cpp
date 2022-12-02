@@ -129,7 +129,7 @@ bool ClientLauncher::run(GameStartData &start_data, const Settings &cmd_args)
 	// Create game callback for menus
 	g_gamecallback = new MainGameCallback();
 
-	m_rendering_engine->setResizable(true);
+	m_rendering_engine->setResizable(start_data.resizable);
 
 	init_input();
 
@@ -346,6 +346,11 @@ void ClientLauncher::init_args(GameStartData &start_data, const Settings &cmd_ar
 
 	random_input = g_settings->getBool("random_input")
 			|| cmd_args.getFlag("random-input");
+	
+	start_data.resizable = !cmd_args.getFlag("noresizing");
+
+	if (cmd_args.exists("cursor-image"))
+		start_data.cursor_image_path = cmd_args.get("cursor-image");
 }
 
 bool ClientLauncher::init_engine()

@@ -73,6 +73,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "script/scripting_client.h"
 #include "hud.h"
 #include <zmqpp/zmqpp.hpp>
+#include "dumbhandler.h"
 
 #if USE_SOUND
 	#include "client/sound_openal.h"
@@ -897,6 +898,13 @@ private:
 
 	Recorder *recorder = nullptr;
 
+	// ZMQ objects
+	zmqpp::context context;
+	zmqpp::socket zmqclient;
+
+	// cursor image used in Gui recording
+	irr::video::IImage* cursorImage;
+
 	IWritableTextureSource *texture_src = nullptr;
 	IWritableShaderSource *shader_src = nullptr;
 
@@ -1000,7 +1008,8 @@ private:
 
 Game::Game() :
 	m_chat_log_buf(g_logger),
-	m_game_ui(new GameUI())
+	m_game_ui(new GameUI()),
+	zmqclient(context, zmqpp::socket_type::request)
 {
 	g_settings->registerChangedCallback("doubletap_jump",
 		&settingChangedCallback, this);
@@ -1139,8 +1148,28 @@ bool Game::startup(bool *kill,
 	if (!createClient(start_data))
 		return false;
 
-	if(start_data.isRecording())
+	// create ZMQ objects
+	std::string address = std::string("tcp://127.0.0.1:") + start_data.dumb_client_port;
+	std::cout << "Try to connect to: " << address << std::endl;
+	try{
+		zmqclient.connect(address);
+	} catch (zmqpp::zmq_internal_exception &e) {
+		errorstream << "ZeroMQ error: " << e.what() << " (port: " << start_data.dumb_client_port << ")\n";
+		throw e;
+	};
+	// setup socket for dumb handler and recorder
+	if(start_data.isDumbClient()) {
+		dynamic_cast<DumbClientInputHandler*>(input)->socket = &zmqclient;
+	}
+	if(start_data.isRecording())  {
 		createRecorder(start_data);
+		recorder->sender = &zmqclient;
+	}
+	// setup provided cursor image
+	if (start_data.cursor_image_path != "") {
+		core::string<fschar_t> cursorPath = start_data.cursor_image_path.c_str();
+		cursorImage = driver->createImageFromFile(cursorPath);
+	}
 
 	m_rendering_engine->initialize(client, hud);
 
@@ -1176,6 +1205,14 @@ void Game::run()
 	while (m_rendering_engine->run()
 			&& !(*kill || g_gamecallback->shutdown_requested
 			|| (server && server->isShutdownRequested()))) {
+		
+
+		// send data out
+		std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
+		if(recorder)
+			recorder->sendDataOut(isMenuActive(), cursorImage, client, input);
+		std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+		warningstream << "Time difference = " << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() << "[µs]" << std::endl;
 
 		const irr::core::dimension2d<u32> &current_screen_size =
 			m_rendering_engine->get_video_driver()->getScreenSize();
@@ -1250,12 +1287,6 @@ void Game::run()
 			showPauseMenu();
 		}
 
-		// send data out
-		std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
-		if(recorder)
-			recorder->sendDataOut(client, input);
-		std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
-		warningstream << "Time difference = " << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() << "[µs]" << std::endl;
 	}
 }
 
