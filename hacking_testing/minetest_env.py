@@ -2,6 +2,7 @@ import gym
 import matplotlib.pyplot as plt
 import numpy as np
 import zmq
+from proto_python.client import dumb_inputs_pb2 as dumb_inputs
 from gym.spaces import Box, Dict, Discrete
 
 # TODO read from the minetest.conf file
@@ -96,10 +97,15 @@ class Minetest(gym.Env):
 
     def step(self, action):
         # make mouse action serializable
-        if isinstance(action["mouse"], np.ndarray):
-            action["mouse"] = action["mouse"].tolist()
+        pb_action = dumb_inputs.InputAction()
+        pb_action.mouseDx, pb_action.mouseDy = action["mouse"]
+        for key, v in action.items():
+            if key == "mouse":
+                continue
+            pb_action.keyEvents.append(dumb_inputs.KeyboardEvent(key=key, eventType=dumb_inputs.PRESS if v else dumb_inputs.RELEASE))
+
         print("Sending action: {}".format(action))
-        self.socket.send_json(action)
+        self.socket.send(pb_action.SerializeToString())
         print("Waiting for obs...")
         byte_next_obs = self.socket.recv()
         next_obs = np.frombuffer(byte_next_obs, dtype=np.uint8).reshape(

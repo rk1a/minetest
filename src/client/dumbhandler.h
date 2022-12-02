@@ -19,6 +19,10 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #pragma once
 
+#include "client/client.h"
+#include "client/renderingengine.h"
+#include "client/dumb_inputs.pb.h"
+//#include "irrlichttypes_extrabloated.h"
 #include "client/inputhandler.h"
 #include "gui/mainmenumanager.h"
 #include <zmqpp/zmqpp.hpp>

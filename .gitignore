@@ -37,6 +37,14 @@ build/.cmake/
 # GNU Patch reject file
 *.rej
 
+# Protobuf
+dumb_inputs.pb.cc
+dumb_inputs.pb.h
+dumb_inputs_pb2.py
+
+# Python
+**/__pycache__/
+
 newworld/
 ## Non-static Minetest directories or symlinks to these
 /bin/
