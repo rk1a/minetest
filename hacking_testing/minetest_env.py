@@ -3,10 +3,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import zmq
 from gym.spaces import Box, Dict, Discrete
-from matplotlib.pyplot import close, draw, figure, pause
-
-plt.rcParams["toolbar"] = "None"
-plt.rcParams["figure.autolayout"] = True
 
 # TODO read from the minetest.conf file
 DISPLAY_SIZE = (1024, 600)
@@ -124,13 +120,17 @@ class Minetest(gym.Env):
             gym.logger.warn(
                 "You are calling render method without specifying any render mode. "
                 "You can specify the render_mode at initialization, "
-                f'e.g. gym("{self.spec.id}", render_mode="rgb_array")'
+                f'e.g. gym("{self.spec.id}", render_mode="rgb_array")',
             )
             return
         if render_mode == "human":
             if self.render_img is None:
-                self.render_fig = figure(
-                    num="Minetest", figsize=(3 * DISPLAY_SIZE[0] / DISPLAY_SIZE[1], 3)
+                # Setup figure
+                plt.rcParams["toolbar"] = "None"
+                plt.rcParams["figure.autolayout"] = True
+
+                self.render_fig = plt.figure(
+                    num="Minetest", figsize=(3 * DISPLAY_SIZE[0] / DISPLAY_SIZE[1], 3),
                 )
                 self.render_img = self.render_fig.gca().imshow(
                     self.last_obs,
@@ -140,10 +140,10 @@ class Minetest(gym.Env):
                 self.render_fig.gca().autoscale_view()
             else:
                 self.render_img.set_data(self.last_obs)
-            draw(), pause(1e-3)
+            plt.draw(), plt.pause(1e-3)
         elif render_mode == "rgb_array":
             return self.last_obs
 
     def close(self):
         if self.render_fig is not None:
-            close()
+            plt.close()
