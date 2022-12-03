@@ -45,7 +45,7 @@ struct GameStartData : GameParams
 	GameStartData() = default;
 
 	bool isSinglePlayer() const { return address.empty() && !local_server; }
-	bool isDumbClient() const { return dumb && !dumb_client_port.empty(); }
+	bool isDumbClient() const { return dumb && !client_address.empty(); }
 	bool isRecording() const { return record && !record_port.empty(); }
 	bool isResizable() const { return resizable; }
 
@@ -55,7 +55,7 @@ struct GameStartData : GameParams
 	bool local_server;
 
 	bool dumb;
-	std::string dumb_client_port;
+	std::string client_address;
 	bool record;
 	std::string record_port;
 	bool resizable;

@@ -1149,12 +1149,12 @@ bool Game::startup(bool *kill,
 		return false;
 
 	// create ZMQ objects
-	std::string address = std::string("tcp://127.0.0.1:") + start_data.dumb_client_port;
+	std::string address = start_data.client_address;
 	std::cout << "Try to connect to: " << address << std::endl;
 	try{
 		zmqclient.connect(address);
 	} catch (zmqpp::zmq_internal_exception &e) {
-		errorstream << "ZeroMQ error: " << e.what() << " (port: " << start_data.dumb_client_port << ")\n";
+		errorstream << "ZeroMQ error: " << e.what() << " (port: " << start_data.client_address << ")\n";
 		throw e;
 	};
 	// setup socket for dumb handler and recorder

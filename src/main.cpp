@@ -379,8 +379,8 @@ static void set_allowed_options(OptionList *allowed_options)
 		_("Starts with the console (Windows only)"))));
 	allowed_options->insert(std::make_pair("dumb", ValueSpec(VALUETYPE_FLAG,
 			_("Makes this client a dumb client (Not for servers)"))));
-	allowed_options->insert(std::make_pair("dumb-port", ValueSpec(VALUETYPE_STRING,
-			_("ZeroMQ port for the dumb client."))));
+	allowed_options->insert(std::make_pair("client-address", ValueSpec(VALUETYPE_STRING,
+			_("ZeroMQ address to the Python client."))));
 	allowed_options->insert(std::make_pair("record", ValueSpec(VALUETYPE_FLAG,
 			_("Makes this client a recording client (Not for servers)"))));
 	allowed_options->insert(std::make_pair("record-port", ValueSpec(VALUETYPE_STRING,
