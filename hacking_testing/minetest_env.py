@@ -2,6 +2,8 @@ import os
 import subprocess
 import uuid
 
+from grpc import server
+
 import gym
 import matplotlib.pyplot as plt
 import numpy as np
@@ -123,6 +125,9 @@ class Minetest(gym.Env):
     def __init__(
         self,
         socket_port: int = 5555,
+        minetest_executable: os.PathLike = None, 
+        log_dir: os.PathLike = None,
+        config_path: os.PathLike = None
     ):
         # Define action and observation space
         self.action_space = Dict(
@@ -140,11 +145,19 @@ class Minetest(gym.Env):
         )
         self.observation_space = Box(0, 255, shape=(*DISPLAY_SIZE, 3), dtype=np.uint8)
 
+        root_dir = os.path.dirname(os.path.dirname(__file__))
+        if minetest_executable is None:
+            minetest_executable = os.path.join(root_dir, "bin", "minetest")
+        if log_dir is None:
+            log_dir = os.path.join(root_dir, "log")
+        if config_path is None:
+            config_path = os.path.join(root_dir, "minetest.conf")
+
         # Start Minetest server and client
         self.server_process = start_minetest_server(
-            "bin/minetest", "minetest.conf", "log", "newworld"
+            minetest_executable, config_path, log_dir, "newworld"
         )
-        self.client_process = start_minetest_client("bin/minetest", "log", socket_port)
+        self.client_process = start_minetest_client(minetest_executable, log_dir, socket_port)
 
         # Setup ZMQ
         self.socket_port = socket_port
@@ -184,6 +197,12 @@ class Minetest(gym.Env):
 
         print("Sending action: {}".format(action))
         self.socket.send(pb_action.SerializeToString())
+
+        # TODO more robust check for whether a server/client is alive while receiving observations
+        for process in [self.server_process, self.client_process]:
+            if process.poll() is not None:
+                return self.last_obs, 0.0, True, {}
+        
         print("Waiting for obs...")
         byte_next_obs = self.socket.recv()
         next_obs = np.frombuffer(byte_next_obs, dtype=np.uint8).reshape(
