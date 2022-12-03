@@ -185,6 +185,10 @@ void RenderingEngine::cleanupMeshCache()
 	}
 }
 
+irr::video::IImage *RenderingEngine::get_screenshot() {
+	return core->get_screenshot();
+}
+
 bool RenderingEngine::setupTopLevelWindow(const std::string &name)
 {
 	// FIXME: It would make more sense for there to be a switch of some

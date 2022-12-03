@@ -43,6 +43,7 @@ protected:
 	v2u32 virtual_size { 0, 0 };
 
 	virtual void createPipeline() {}
+	video::IImage *screenshot;
 
 public:
 	RenderingCore(IrrlichtDevice *device, Client *client, Hud *hud, 
@@ -65,4 +66,5 @@ public:
 	v2u32 getVirtualSize() const;
 
 	ShadowRenderer *get_shadow_renderer() { return shadow_renderer; };
+	video::IImage *get_screenshot();
 };
