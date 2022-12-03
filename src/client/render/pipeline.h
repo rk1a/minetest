@@ -181,10 +181,11 @@ public:
 	TextureBufferOutput(TextureBuffer *buffer, const std::vector<u8> &texture_map, u8 depth_stencil);
 	virtual ~TextureBufferOutput() override;
 	void activate(PipelineContext &context) override;
+	TextureBuffer *buffer;
+
 private:
 	static const u8 NO_DEPTH_TEXTURE = 255;
 
-	TextureBuffer *buffer;
 	std::vector<u8> texture_map;
 	u8 depth_stencil { NO_DEPTH_TEXTURE };
 	video::IRenderTarget* render_target { nullptr };
@@ -406,8 +407,9 @@ public:
 
 	virtual void setRenderSource(RenderSource *source) override;
 	virtual void setRenderTarget(RenderTarget *target) override;
-private:
 	std::vector<RenderStep *> m_pipeline;
+private:
+
 	std::vector< std::unique_ptr<RenderPipelineObject> > m_objects;
 	DynamicSource m_input;
 	DynamicTarget m_output;

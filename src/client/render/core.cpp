@@ -44,6 +44,17 @@ void RenderingCore::initialize()
 	createPipeline();
 }
 
+void RenderingCore::savetex(video::ITexture *texture, std::string filename, video::IVideoDriver* videoDriver) {
+    video::IImage* image = videoDriver->createImageFromData(
+        texture->getColorFormat(),
+        texture->getSize(),
+        texture->lock(irr::video::E_TEXTURE_LOCK_MODE::ETLM_READ_WRITE),
+        true  //copy mem
+        );
+    videoDriver->writeImageToFile(image, "temp.png");
+    texture->unlock();
+}
+
 void RenderingCore::draw(video::SColor _skycolor, bool _show_hud, bool _show_minimap,
 		bool _draw_wield_tool, bool _draw_crosshair)
 {
@@ -56,8 +67,18 @@ void RenderingCore::draw(video::SColor _skycolor, bool _show_hud, bool _show_min
 	context.show_hud = _show_hud;
 	context.show_minimap = _show_minimap;
 
+	TextureBuffer *buffer = pipeline->createOwned<TextureBuffer>();
+    buffer->setTexture(0, v2f(1.0f, 1.0f), "idk_lol", video::ECF_A8R8G8B8);
+    auto tex = new TextureBufferOutput(buffer, 0);
+    pipeline->setRenderTarget(tex);
+
+	for (auto &step: pipeline->m_pipeline)
+		step->setRenderTarget(tex);
+
 	pipeline->reset(context);
 	pipeline->run(context);
+
+	savetex(tex->buffer->getTexture(0),"mu",device->getVideoDriver());
 }
 
 v2u32 RenderingCore::getVirtualSize() const
