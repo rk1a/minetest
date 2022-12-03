@@ -338,11 +338,7 @@ void ClientLauncher::init_args(GameStartData &start_data, const Settings &cmd_ar
 
 	// copy-paste for now, the logic will probably diverge later
 	start_data.record = cmd_args.getFlag("record");
-	if(cmd_args.exists("record-port"))
-		start_data.record_port = cmd_args.get("record-port");
-	
-	record = start_data.isRecording();
-	record_port = start_data.record_port;
+	record = start_data.record;
 
 	random_input = g_settings->getBool("random_input")
 			|| cmd_args.getFlag("random-input");

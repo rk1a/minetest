@@ -52,7 +52,6 @@ private:
 	bool dumb = false;
 	std::string client_address = "";
 	bool record = false;
-	std::string record_port = "";
 	RenderingEngine *m_rendering_engine = nullptr;
 	InputHandler *input = nullptr;
 	MyEventReceiver *receiver = nullptr;

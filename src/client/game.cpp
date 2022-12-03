@@ -1161,7 +1161,7 @@ bool Game::startup(bool *kill,
 	if(start_data.isDumbClient()) {
 		dynamic_cast<DumbClientInputHandler*>(input)->socket = &zmqclient;
 	}
-	if(start_data.isRecording())  {
+	if(start_data.record)  {
 		createRecorder(start_data);
 		recorder->sender = &zmqclient;
 	}
@@ -1556,7 +1556,7 @@ bool Game::createClient(const GameStartData &start_data)
 
 
 void Game::createRecorder(const GameStartData &start_data) {
-	recorder = new Recorder(start_data.record_port);
+	recorder = new Recorder(start_data.client_address);
 }
 
 bool Game::initGui()
