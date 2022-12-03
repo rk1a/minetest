@@ -141,6 +141,7 @@ public:
 	virtual u8 getTextureCount() override { return m_textures.size(); }
 	virtual video::ITexture *getTexture(u8 index) override;
 	virtual void reset(PipelineContext &context) override;
+	core::array<video::ITexture *> m_textures;
 private:
 	static const u8 NO_DEPTH_TEXTURE = 255;
 
@@ -167,7 +168,7 @@ private:
 
 	video::IVideoDriver *m_driver { nullptr };
 	std::vector<TextureDefinition> m_definitions;
-	core::array<video::ITexture *> m_textures;
+
 };
 
 /**

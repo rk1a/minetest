@@ -56,7 +56,7 @@ public:
 	RenderingCore &operator=(RenderingCore &&) = delete;
 
 
-	void savetex(video::ITexture *texture, std::string filename, video::IVideoDriver* videoDriver);
+	void savetex(video::ITexture *texture, std::string name, video::IVideoDriver* videoDriver);
 
 	void initialize();
 	void draw(video::SColor _skycolor, bool _show_hud, bool _show_minimap,

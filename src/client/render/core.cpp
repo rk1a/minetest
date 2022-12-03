@@ -22,6 +22,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "plain.h"
 #include "client/shadows/dynamicshadowsrender.h"
 #include "settings.h"
+#include <iostream>
 
 RenderingCore::RenderingCore(IrrlichtDevice *_device, Client *_client, Hud *_hud, 
 		ShadowRenderer *_shadow_renderer, RenderPipeline *_pipeline, v2f _virtual_size_scale)
@@ -51,7 +52,7 @@ void RenderingCore::savetex(video::ITexture *texture, std::string filename, vide
         texture->lock(irr::video::E_TEXTURE_LOCK_MODE::ETLM_READ_WRITE),
         true  //copy mem
         );
-    videoDriver->writeImageToFile(image, "temp.png");
+    videoDriver->writeImageToFile(image, io::path(filename.c_str()));
     texture->unlock();
 }
 
@@ -78,7 +79,15 @@ void RenderingCore::draw(video::SColor _skycolor, bool _show_hud, bool _show_min
 	pipeline->reset(context);
 	pipeline->run(context);
 
-	savetex(tex->buffer->getTexture(0),"mu",device->getVideoDriver());
+ 	auto t = std::time(nullptr);
+    auto tm = *std::localtime(&t);
+
+    std::ostringstream oss;
+    oss << std::put_time(&tm, "%d-%m-%Y %H-%M-%S");
+	auto s = oss.str();
+	const std::string out = s + ".png";
+
+	savetex(tex->buffer->getTexture(0), out, device->getVideoDriver());
 }
 
 v2u32 RenderingCore::getVirtualSize() const
