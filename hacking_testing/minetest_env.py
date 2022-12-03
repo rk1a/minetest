@@ -104,8 +104,6 @@ def start_minetest_client(
         "--client-address",
         "tcp://localhost:" + str(client_port),
         "--record",
-        "--record-port",  # TODO remove the requirement for this
-        "1234",
         "--noresizing",
     ]
     if cursor_img:
