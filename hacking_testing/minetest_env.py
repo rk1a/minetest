@@ -2,8 +2,6 @@ import os
 import subprocess
 import uuid
 
-from grpc import server
-
 import gym
 import matplotlib.pyplot as plt
 import numpy as np
