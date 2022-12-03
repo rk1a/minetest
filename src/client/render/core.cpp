@@ -69,22 +69,23 @@ void RenderingCore::draw(video::SColor _skycolor, bool _show_hud, bool _show_min
 	context.show_minimap = _show_minimap;
 
 	TextureBuffer *buffer = pipeline->createOwned<TextureBuffer>();
-    buffer->setTexture(0, v2f(1.0f, 1.0f), "idk_lol", video::ECF_A8R8G8B8);
+    buffer->setTexture(0, v2f(1.0f, 1.0f), "idk_lol", video::ECF_R8G8B8);
     auto tex = new TextureBufferOutput(buffer, 0);
     pipeline->setRenderTarget(tex);
 
-	for (auto &step: pipeline->m_pipeline)
+	for (auto &step: pipeline->m_pipeline) {
 		step->setRenderTarget(tex);
+	}
 
 	pipeline->reset(context);
 	pipeline->run(context);
 
- 	auto t = std::time(nullptr);
-    auto tm = *std::localtime(&t);
+ 	// auto t = std::time(nullptr);
+    // auto tm = *std::localtime(&t);
 
-    std::ostringstream oss;
-    oss << std::put_time(&tm, "%d-%m-%Y %H-%M-%S");
-	auto s = oss.str();
+    // std::ostringstream oss;
+    // oss << std::put_time(&tm, "%d-%m-%Y %H-%M-%S");
+	auto s = std::string("tmp");  // oss.str();
 	const std::string out = s + ".png";
 
 	savetex(tex->buffer->getTexture(0), out, device->getVideoDriver());
