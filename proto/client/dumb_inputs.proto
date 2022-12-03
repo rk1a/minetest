@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-message InputEvent {
+message InputAction {
     repeated KeyboardEvent keyEvents = 1;
     sint32 mouseDx = 2;
     sint32 mouseDy = 3;

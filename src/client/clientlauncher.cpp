@@ -129,7 +129,7 @@ bool ClientLauncher::run(GameStartData &start_data, const Settings &cmd_args)
 	// Create game callback for menus
 	g_gamecallback = new MainGameCallback();
 
-	m_rendering_engine->setResizable(true);
+	m_rendering_engine->setResizable(start_data.resizable);
 
 	init_input();
 
@@ -330,22 +330,23 @@ void ClientLauncher::init_args(GameStartData &start_data, const Settings &cmd_ar
 		start_data.name = cmd_args.get("name");
 
 	start_data.dumb = cmd_args.getFlag("dumb");
-	if(cmd_args.exists("dumb-port"))
-		start_data.dumb_client_port = cmd_args.get("dumb-port");
-	
+	if(cmd_args.exists("client-address"))
+		start_data.client_address = cmd_args.get("client-address");
+
 	dumb = start_data.isDumbClient();
-	dumb_port = start_data.dumb_client_port;
+	client_address = start_data.client_address;
 
 	// copy-paste for now, the logic will probably diverge later
 	start_data.record = cmd_args.getFlag("record");
-	if(cmd_args.exists("record-port"))
-		start_data.record_port = cmd_args.get("record-port");
-	
-	record = start_data.isRecording();
-	record_port = start_data.record_port;
+	record = start_data.record;
 
 	random_input = g_settings->getBool("random_input")
 			|| cmd_args.getFlag("random-input");
+	
+	start_data.resizable = !cmd_args.getFlag("noresizing");
+
+	if (cmd_args.exists("cursor-image"))
+		start_data.cursor_image_path = cmd_args.get("cursor-image");
 }
 
 bool ClientLauncher::init_engine()
@@ -358,7 +359,7 @@ bool ClientLauncher::init_engine()
 void ClientLauncher::init_input()
 {
 	if (dumb)
-		input = new DumbClientInputHandler(receiver, dumb_port);
+		input = new DumbClientInputHandler(receiver);
 	else if (random_input)
 		input = new RandomInputHandler();
 	else
