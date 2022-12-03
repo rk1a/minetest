@@ -1149,21 +1149,23 @@ bool Game::startup(bool *kill,
 		return false;
 
 	// create ZMQ objects
-	std::string address = start_data.client_address;
-	std::cout << "Try to connect to: " << address << std::endl;
-	try{
-		zmqclient.connect(address);
-	} catch (zmqpp::zmq_internal_exception &e) {
-		errorstream << "ZeroMQ error: " << e.what() << " (port: " << start_data.client_address << ")\n";
-		throw e;
-	};
-	// setup socket for dumb handler and recorder
-	if(start_data.isDumbClient()) {
-		dynamic_cast<DumbClientInputHandler*>(input)->socket = &zmqclient;
-	}
-	if(start_data.record)  {
-		createRecorder(start_data);
-		recorder->sender = &zmqclient;
+	if(start_data.isDumbClient() || start_data.record) {
+		std::string address = start_data.client_address;
+		std::cout << "Try to connect to: " << address << std::endl;
+		try {
+			zmqclient.connect(address);
+		} catch (zmqpp::zmq_internal_exception &e) {
+			errorstream << "ZeroMQ error: " << e.what() << " (port: " << start_data.client_address << ")\n";
+			throw e;
+		};
+		// setup socket for dumb handler and recorder
+		if (start_data.isDumbClient()) {
+			dynamic_cast<DumbClientInputHandler*>(input)->socket = &zmqclient;
+		}
+		if (start_data.record)  {
+			createRecorder(start_data);
+			recorder->sender = &zmqclient;
+		}
 	}
 	// setup provided cursor image
 	if (start_data.cursor_image_path != "") {
