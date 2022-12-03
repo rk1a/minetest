@@ -1,3 +1,7 @@
+import os
+import subprocess
+import uuid
+
 import gym
 import matplotlib.pyplot as plt
 import numpy as np
@@ -50,6 +54,71 @@ KEYS = [
 ]
 
 
+def start_minetest_server(
+    minetest_path: str = "bin/minetest",
+    config_path: str = "minetest.conf",
+    log_dir: str = "log",
+    world: str = None,
+):
+    if world:
+        world_path = world
+    else:
+        world_path = str(uuid.uuid4())
+    cmd = [
+        minetest_path,
+        "--server",
+        "--world",
+        world_path,
+        "--gameid",
+        "minetest",
+        "--config",
+        config_path,
+    ]
+    os.makedirs(log_dir, exist_ok=True)
+    stdout_file = os.path.join(log_dir, "server_stdout.log")
+    stderr_file = os.path.join(log_dir, "server_stderr.log")
+    with open(stdout_file, "w") as out, open(stderr_file, "w") as err:
+        server_process = subprocess.Popen(cmd, stdout=out, stderr=err)
+    return server_process
+
+
+def start_minetest_client(
+    minetest_path: str = "bin/minetest",
+    log_dir: str = "log",
+    client_port: int = 5555,
+    cursor_img: str = "cursors/mouse_cursor_white_16x16.png",
+    client_name: str = "MinetestAgent",
+):
+    cmd = [
+        minetest_path,
+        "--name",
+        client_name,
+        "--password",
+        "1234",
+        "--address",
+        "0.0.0.0",  # listen to all interfaces
+        "--port",
+        "30000",  # TODO this should be the same as in minetest.conf
+        "--go",
+        "--dumb",
+        "--client-address",
+        "tcp://localhost:" + str(client_port),
+        "--record",
+        "--record-port",  # TODO remove the requirement for this
+        "1234",
+        "--noresizing",
+    ]
+    if cursor_img:
+        cmd.extend(["--cursor-image", cursor_img])
+
+    os.makedirs(log_dir, exist_ok=True)
+    stdout_file = os.path.join(log_dir, "client_stdout.log")
+    stderr_file = os.path.join(log_dir, "client_stderr.log")
+    with open(stdout_file, "w") as out, open(stderr_file, "w") as err:
+        client_process = subprocess.Popen(cmd, stdout=out, stderr=err)
+    return client_process
+
+
 class Minetest(gym.Env):
     metadata = {"render.modes": ["rgb_array", "human"]}
 
@@ -72,6 +141,12 @@ class Minetest(gym.Env):
             },
         )
         self.observation_space = Box(0, 255, shape=(*DISPLAY_SIZE, 3), dtype=np.uint8)
+
+        # Start Minetest server and client
+        self.server_process = start_minetest_server(
+            "bin/minetest", "minetest.conf", "log", "newworld"
+        )
+        self.client_process = start_minetest_client("bin/minetest", "log", socket_port)
 
         # Setup ZMQ
         self.socket_port = socket_port
@@ -104,7 +179,8 @@ class Minetest(gym.Env):
                 continue
             pb_action.keyEvents.append(
                 dumb_inputs.KeyboardEvent(
-                    key=key, eventType=dumb_inputs.PRESS if v else dumb_inputs.RELEASE,
+                    key=key,
+                    eventType=dumb_inputs.PRESS if v else dumb_inputs.RELEASE,
                 ),
             )
 
@@ -158,3 +234,6 @@ class Minetest(gym.Env):
     def close(self):
         if self.render_fig is not None:
             plt.close()
+        self.socket.close()
+        self.client_process.kill()
+        self.server_process.kill()
