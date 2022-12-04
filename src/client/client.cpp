@@ -1894,7 +1894,8 @@ void Client::makeScreenshot()
 
 std::string Client::getSendableData(core::position2di cursorPosition, bool isMenuActive, irr::video::IImage* cursorImage) {
 	irr::video::IVideoDriver *driver = m_rendering_engine->get_video_driver();
-	irr::video::IImage* const raw_image = driver->createScreenShot();
+	// irr::video::IImage* const raw_image = driver->createScreenShot();
+	irr::video::IImage* raw_image = m_rendering_engine->get_screenshot();
 
 	if (!raw_image)
 		return "";
