@@ -58,7 +58,7 @@ void RenderingCore::draw(video::SColor _skycolor, bool _show_hud, bool _show_min
 	context.show_minimap = _show_minimap;
 
 	TextureBuffer *buffer = pipeline->createOwned<TextureBuffer>();
-    buffer->setTexture(0, v2f(1.0f, 1.0f), "idk_lol", video::ECF_A8R8G8B8);
+    buffer->setTexture(0, v2f(1.0f, 1.0f), "idk_lol", video::ECF_R8G8B8);
     auto tex = new TextureBufferOutput(buffer, 0);
     pipeline->setRenderTarget(tex);
 
@@ -75,6 +75,7 @@ void RenderingCore::draw(video::SColor _skycolor, bool _show_hud, bool _show_min
         t->lock(irr::video::E_TEXTURE_LOCK_MODE::ETLM_READ_WRITE),
         true  //copy mem
         );
+    device->getVideoDriver()->writeImageToFile(screenshot, io::path("tmp.png"));
     t->unlock();
 }
 
