@@ -1899,11 +1899,14 @@ std::string Client::getSendableData(core::position2di cursorPosition, bool isMen
 
 	if (!raw_image)
 		return "";
+	// warningstream << "get" << std::endl;
+		// driver->writeImageToFile(raw_image, io::path("tmp.png"));
+	// warningstream << "draw" << std::endl;
 
 	irr::video::IImage* const image =
 			driver->createImage(video::ECF_R8G8B8, raw_image->getDimension());
 	raw_image->copyTo(image);
-	raw_image->drop();
+	// raw_image->drop();
 
 	// if provided draw the cursor image at the current mouse position when GUI is open
 	if (isMenuActive && cursorImage) {
@@ -1913,7 +1916,7 @@ std::string Client::getSendableData(core::position2di cursorPosition, bool isMen
 	}
 	
 	auto dim = image->getDimension();
-	// warningstream << "Got data; format: " << image->getColorFormat() << "; width: " << dim.Width << ", height: " << dim.Height << std::endl;
+	warningstream << "Got data; format: " << image->getColorFormat() << "; width: " << dim.Width << ", height: " << dim.Height << std::endl;
 	std::string data = std::string((char*)image->getData(), image->getImageDataSizeInBytes());
 	image->drop();
 	return data;

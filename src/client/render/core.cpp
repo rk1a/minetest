@@ -69,18 +69,27 @@ void RenderingCore::draw(video::SColor _skycolor, bool _show_hud, bool _show_min
 	pipeline->run(context);
 
 	auto t = tex->buffer->getTexture(0);
-    screenshot = device->getVideoDriver()->createImageFromData(
+    auto raw_image = device->getVideoDriver()->createImageFromData(
         t->getColorFormat(),
         t->getSize(),
-        t->lock(irr::video::E_TEXTURE_LOCK_MODE::ETLM_READ_WRITE),
-        true  //copy mem
+        t->lock(irr::video::E_TEXTURE_LOCK_MODE::ETLM_READ_ONLY),
+        false  //copy mem
         );
-    device->getVideoDriver()->writeImageToFile(screenshot, io::path("tmp.png"));
+	if(screenshot)
+		screenshot->drop();
+	screenshot =
+			 device->getVideoDriver()->createImage(video::ECF_R8G8B8,
+			//  device->getVideoDriver()->getScreenSize()
+			 raw_image->getDimension()
+			 );
+	raw_image->copyTo(screenshot);
+
+	raw_image->drop();
     t->unlock();
 }
 
 video::IImage *RenderingCore::get_screenshot() {
-	return screenshot;
+		return screenshot;
 }
 
 v2u32 RenderingCore::getVirtualSize() const

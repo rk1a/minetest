@@ -43,7 +43,7 @@ protected:
 	v2u32 virtual_size { 0, 0 };
 
 	virtual void createPipeline() {}
-	video::IImage *screenshot;
+	video::IImage *screenshot = nullptr;
 
 public:
 	RenderingCore(IrrlichtDevice *device, Client *client, Hud *hud, 

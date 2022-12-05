@@ -182,28 +182,17 @@ class Minetest(gym.Env):
                 )
             except ValueError:
                 print("Zero packet received...")
+                self.send_action(self.action_space.sample())
             else:
                 break
         self.last_obs = obs
         print("Received obs: {}".format(obs.shape))
         return obs
+        
 
     def step(self, action):
-        # make mouse action serializable
-        pb_action = dumb_inputs.InputAction()
-        pb_action.mouseDx, pb_action.mouseDy = action["mouse"]
-        for key, v in action.items():
-            if key == "mouse":
-                continue
-            pb_action.keyEvents.append(
-                dumb_inputs.KeyboardEvent(
-                    key=key,
-                    eventType=dumb_inputs.PRESS if v else dumb_inputs.RELEASE,
-                ),
-            )
-
         print("Sending action: {}".format(action))
-        self.socket.send(pb_action.SerializeToString())
+        self.send_action(action)
 
         # TODO more robust check for whether a server/client is alive while receiving observations
         for process in [self.server_process, self.client_process]:
@@ -224,6 +213,21 @@ class Minetest(gym.Env):
         done = False
         info = {}
         return next_obs, rew, done, info
+    
+    def send_action(self, action):
+        # make mouse action serializable
+        pb_action = dumb_inputs.InputAction()
+        pb_action.mouseDx, pb_action.mouseDy = action["mouse"]
+        for key, v in action.items():
+            if key == "mouse":
+                continue
+            pb_action.keyEvents.append(
+                dumb_inputs.KeyboardEvent(
+                    key=key,
+                    eventType=dumb_inputs.PRESS if v else dumb_inputs.RELEASE,
+                ),
+            )
+        self.socket.send(pb_action.SerializeToString())
 
     def render(self, render_mode: str = "human"):
         if render_mode is None:

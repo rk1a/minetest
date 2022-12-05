@@ -1149,7 +1149,8 @@ bool Game::startup(bool *kill,
 		return false;
 
 	// create ZMQ objects
-	if(start_data.isDumbClient() || start_data.record) {
+	errorstream << start_data.isDumbClient() << " " << start_data.isRecording();
+	if(start_data.isDumbClient() || start_data.isRecording()) {
 		std::string address = start_data.client_address;
 		std::cout << "Try to connect to: " << address << std::endl;
 		try {
@@ -1162,7 +1163,7 @@ bool Game::startup(bool *kill,
 		if (start_data.isDumbClient()) {
 			dynamic_cast<DumbClientInputHandler*>(input)->socket = &zmqclient;
 		}
-		if (start_data.record)  {
+		if (start_data.isRecording())  {
 			createRecorder(start_data);
 			recorder->sender = &zmqclient;
 		}
@@ -1204,10 +1205,12 @@ void Game::run()
 	irr::core::dimension2d<u32> previous_screen_size(g_settings->getU16("screen_w"),
 		g_settings->getU16("screen_h"));
 
+	// errorstream << "Go 1" << std::endl;
 	while (m_rendering_engine->run()
 			&& !(*kill || g_gamecallback->shutdown_requested
 			|| (server && server->isShutdownRequested()))) {
-		
+
+		client->makeScreenshot();
 
 		// send data out
 		std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
