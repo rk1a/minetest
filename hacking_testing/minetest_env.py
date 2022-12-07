@@ -8,6 +8,7 @@ import numpy as np
 import zmq
 from gym.spaces import Box, Dict, Discrete
 from proto_python.client import dumb_inputs_pb2 as dumb_inputs
+from proto_python.client import dumb_outputs_pb2 as dumb_outputs
 
 # TODO read from the minetest.conf file
 DISPLAY_SIZE = (1024, 600)
@@ -125,7 +126,7 @@ class Minetest(gym.Env):
         socket_port: int = 5555,
         minetest_executable: os.PathLike = None, 
         log_dir: os.PathLike = None,
-        config_path: os.PathLike = None
+        config_path: os.PathLike = None,
     ):
         # Define action and observation space
         self.action_space = Dict(
@@ -151,11 +152,15 @@ class Minetest(gym.Env):
         if config_path is None:
             config_path = os.path.join(root_dir, "minetest.conf")
 
+        # TODO we might want to also restart server and/or client when calling reset()
+        # in some situations, e.g. in episodic RL tasks the world should be reset
         # Start Minetest server and client
         self.server_process = start_minetest_server(
-            minetest_executable, config_path, log_dir, "newworld"
+            minetest_executable, config_path, log_dir, "newworld",
         )
-        self.client_process = start_minetest_client(minetest_executable, log_dir, socket_port)
+        self.client_process = start_minetest_client(
+            minetest_executable, log_dir, socket_port,
+        )
 
         # Setup ZMQ
         self.socket_port = socket_port
@@ -170,9 +175,11 @@ class Minetest(gym.Env):
     def reset(self):
         print("Waiting for obs...")
         byte_obs = self.socket.recv()
-        obs = np.frombuffer(byte_obs, dtype=np.uint8).reshape(
-            DISPLAY_SIZE[1],
-            DISPLAY_SIZE[0],
+        pb_img = dumb_outputs.OutputImage()
+        pb_img.ParseFromString(byte_obs)
+        obs = np.frombuffer(pb_img.data, dtype=np.uint8).reshape(
+            pb_img.height,
+            pb_img.width,
             3,
         )
         self.last_obs = obs
@@ -203,9 +210,11 @@ class Minetest(gym.Env):
         
         print("Waiting for obs...")
         byte_next_obs = self.socket.recv()
-        next_obs = np.frombuffer(byte_next_obs, dtype=np.uint8).reshape(
-            DISPLAY_SIZE[1],
-            DISPLAY_SIZE[0],
+        pb_img = dumb_outputs.OutputImage()
+        pb_img.ParseFromString(byte_next_obs)
+        next_obs = np.frombuffer(pb_img.data, dtype=np.uint8).reshape(
+            pb_img.height,
+            pb_img.width,
             3,
         )
         self.last_obs = next_obs

@@ -61,7 +61,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "translation.h"
 #include "content/mod_configuration.h"
 #include "SColor.h"
-//#include "client/clientlauncher.h"
+#include "client/dumb_outputs.pb.h"
 
 extern gui::IGUIEnvironment* guienv;
 
@@ -1891,12 +1891,12 @@ void Client::makeScreenshot()
 	raw_image->drop();
 }
 
-std::string Client::getSendableData(core::position2di cursorPosition, bool isMenuActive, irr::video::IImage* cursorImage) {
+OutputImage Client::getSendableData(core::position2di cursorPosition, bool isMenuActive, irr::video::IImage* cursorImage) {
 	irr::video::IVideoDriver *driver = m_rendering_engine->get_video_driver();
 	irr::video::IImage* const raw_image = driver->createScreenShot();
 
 	if (!raw_image)
-		return "";
+		return OutputImage();
 
 	irr::video::IImage* const image =
 			driver->createImage(video::ECF_R8G8B8, raw_image->getDimension());
@@ -1911,8 +1911,11 @@ std::string Client::getSendableData(core::position2di cursorPosition, bool isMen
 	}
 	
 	auto dim = image->getDimension();
-	// warningstream << "Got data; format: " << image->getColorFormat() << "; width: " << dim.Width << ", height: " << dim.Height << std::endl;
-	std::string data = std::string((char*)image->getData(), image->getImageDataSizeInBytes());
+	std::string imageData = std::string((char*)image->getData(), image->getImageDataSizeInBytes());
+	OutputImage data;
+	data.set_data(imageData);
+	data.set_width(dim.Width);
+	data.set_height(dim.Height);
 	image->drop();
 	return data;
 }

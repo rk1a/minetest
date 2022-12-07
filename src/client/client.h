@@ -39,6 +39,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "network/peerhandler.h"
 #include "gameparams.h"
 #include <fstream>
+#include "client/dumb_outputs.pb.h"
 
 #define CLIENT_CHAT_MESSAGE_LIMIT_PER_10S 10.0f
 
@@ -411,7 +412,7 @@ public:
 	void showMinimap(bool show = true);
 
 	// sends data out
-	std::string getSendableData(core::position2di cursorPosition, bool isMenuActive, irr::video::IImage* cursorImage);
+	OutputImage getSendableData(core::position2di cursorPosition, bool isMenuActive, irr::video::IImage* cursorImage);
 
 	const Address getServerAddress();
 

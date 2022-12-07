@@ -18,10 +18,10 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 */
 
 #include "client/recorder.h"
+#include "client/dumb_outputs.pb.h"
 
 void Recorder::sendDataOut(bool isMenuActive, irr::video::IImage* cursorImage, Client *client, InputHandler *input) {
-    // TODO replace with protobuf
-    std::string data = client->getSendableData(input->getMousePos(), isMenuActive, cursorImage);
-    // warningstream << "Sending data out" << std::endl;
-    sender->send(data);
+    OutputImage data = client->getSendableData(input->getMousePos(), isMenuActive, cursorImage);
+    std::string msg = data.SerializeAsString();
+    sender->send(msg);
 }
