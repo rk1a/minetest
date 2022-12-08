@@ -35,6 +35,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "inputhandler.h"
 #include "gettext.h"
 #include "../gui/guiSkin.h"
+#include "CIrrDeviceSDL.h"
 
 #if !defined(_WIN32) && !defined(__APPLE__) && !defined(__ANDROID__) && \
 		!defined(SERVER) && !defined(__HAIKU__)
@@ -140,6 +141,8 @@ RenderingEngine::RenderingEngine(IEventReceiver *receiver)
 			+ "shaders" + DIR_DELIM + "Irrlicht";
 	params.OGLES2ShaderPath = (porting::path_share + DIR_DELIM + rel_path + DIR_DELIM).c_str();
 #endif
+
+	SDL_VideoInit("offscreen");
 
 	m_device = createDeviceEx(params);
 	driver = m_device->getVideoDriver();
