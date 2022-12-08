@@ -1,3 +1,4 @@
 [submodule "lib/irrlichtmt"]
 	path = lib/irrlichtmt
 	url = https://github.com/eleutherai/irrlicht
+        branch = headless-rendering
