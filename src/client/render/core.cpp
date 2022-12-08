@@ -45,7 +45,6 @@ void RenderingCore::initialize()
 	createPipeline();
 }
 
-// #include "client/client.h"
 void RenderingCore::draw(video::SColor _skycolor, bool _show_hud, bool _show_minimap,
 		bool _draw_wield_tool, bool _draw_crosshair)
 {
@@ -77,10 +76,8 @@ void RenderingCore::draw(video::SColor _skycolor, bool _show_hud, bool _show_min
         t->lock(irr::video::E_TEXTURE_LOCK_MODE::ETLM_READ_ONLY),
         false  //copy mem
         );
-	// warningstream << "drop" << std::endl;
 	if(screenshot)
 		screenshot->drop();
-	// warningstream << "dropped" << std::endl;
 	screenshot =
 			 device->getVideoDriver()->createImage(video::ECF_R8G8B8,
 			 device->getVideoDriver()->getScreenSize()
@@ -88,14 +85,9 @@ void RenderingCore::draw(video::SColor _skycolor, bool _show_hud, bool _show_min
 			 );
 	raw_image->copyTo(screenshot);
     t->unlock();
-	// warningstream << screenshot << " " << screenshot->getDimension().Width << " " << screenshot->getDimension().Height
-	// 	<< " " << raw_image << " " << raw_image->getDimension().Width << " " << raw_image->getDimension().Height
-	// 	<< " " << device->getVideoDriver()->getScreenSize().Width << " " << device->getVideoDriver()->getScreenSize().Height << std::endl;
-	// if(get_screenshot()) warningstream << get_screenshot()->getDimension().Width << std::endl;
 
 	raw_image->drop();
 	delete tex, buffer;
-	// if(get_screenshot()) warningstream << get_screenshot()->getDimension().Width << std::endl;
 }
 
 video::IImage *RenderingCore::get_screenshot() {

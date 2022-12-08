@@ -1902,9 +1902,6 @@ std::string Client::getSendableData(core::position2di cursorPosition, bool isMen
 
 	if (!raw_image)
 		return "";
-	// warningstream << "get" << std::endl;
-		// driver->writeImageToFile(raw_image, io::path("tmp.png"));
-	// warningstream << "draw" << std::endl;
 
 	irr::video::IImage* const image =
 			driver->createImage(video::ECF_R8G8B8, raw_image->getDimension());
