@@ -35,6 +35,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "inputhandler.h"
 #include "gettext.h"
 #include "../gui/guiSkin.h"
+#include "CIrrDeviceSDL.h"
 
 #if !defined(_WIN32) && !defined(__APPLE__) && !defined(__ANDROID__) && \
 		!defined(SERVER) && !defined(__HAIKU__)
@@ -83,6 +84,8 @@ static gui::GUISkin *createSkin(gui::IGUIEnvironment *environment,
 RenderingEngine::RenderingEngine(IEventReceiver *receiver)
 {
 	sanity_check(!s_singleton);
+
+	SDL_VideoInit("offscreen");
 
 	// Resolution selection
 	bool fullscreen = g_settings->getBool("fullscreen");
