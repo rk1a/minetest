@@ -1,0 +1,2 @@
+[submodule "lib/irrlichtmt"]
+	url = https://github.com/minetest/irrlicht
