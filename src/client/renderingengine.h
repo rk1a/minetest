@@ -131,6 +131,7 @@ public:
 		return nullptr;
 	}
 	static std::vector<irr::video::E_DRIVER_TYPE> getSupportedVideoDrivers();
+	irr::video::IImage *get_screenshot();
 
 private:
 	v2u32 _getWindowSize() const;

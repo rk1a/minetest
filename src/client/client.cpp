@@ -1824,11 +1824,15 @@ float Client::getCurRate()
 void Client::makeScreenshot()
 {
 	irr::video::IVideoDriver *driver = m_rendering_engine->get_video_driver();
-	irr::video::IImage* const raw_image = driver->createScreenShot();
+	// irr::video::IImage* const raw_image = driver->createScreenShot();
+
+	// warningstream << "getting data" << std::endl;
+	irr::video::IImage* raw_image = m_rendering_engine->get_screenshot();
 
 	if (!raw_image)
 		return;
 
+	// warningstream << "got data" << raw_image->getDimension().Width << std::endl;
 	const struct tm tm = mt_localtime();
 
 	char timetstamp_c[64];
@@ -1893,7 +1897,8 @@ void Client::makeScreenshot()
 
 OutputObservation Client::getSendableData(core::position2di cursorPosition, bool isMenuActive, irr::video::IImage* cursorImage) {
 	irr::video::IVideoDriver *driver = m_rendering_engine->get_video_driver();
-	irr::video::IImage* const raw_image = driver->createScreenShot();
+	// irr::video::IImage* const raw_image = driver->createScreenShot();
+	irr::video::IImage* raw_image = m_rendering_engine->get_screenshot();
 
 	if (!raw_image)
 		return OutputObservation();
@@ -1901,7 +1906,6 @@ OutputObservation Client::getSendableData(core::position2di cursorPosition, bool
 	irr::video::IImage* const image =
 			driver->createImage(video::ECF_R8G8B8, raw_image->getDimension());
 	raw_image->copyTo(image);
-	raw_image->drop();
 
 	// if provided draw the cursor image at the current mouse position when GUI is open
 	if (isMenuActive && cursorImage) {
@@ -1917,6 +1921,7 @@ OutputObservation Client::getSendableData(core::position2di cursorPosition, bool
 	data.set_width(dim.Width);
 	data.set_height(dim.Height);
 	image->drop();
+	raw_image->drop();
 	return data;
 }
 

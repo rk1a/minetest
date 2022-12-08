@@ -144,6 +144,8 @@ RenderingEngine::RenderingEngine(IEventReceiver *receiver)
 	params.OGLES2ShaderPath = (porting::path_share + DIR_DELIM + rel_path + DIR_DELIM).c_str();
 #endif
 
+	SDL_VideoInit("offscreen");
+
 	m_device = createDeviceEx(params);
 	driver = m_device->getVideoDriver();
 
@@ -186,6 +188,10 @@ void RenderingEngine::cleanupMeshCache()
 		if (scene::IAnimatedMesh *mesh = mesh_cache->getMeshByIndex(0))
 			mesh_cache->removeMesh(mesh);
 	}
+}
+
+irr::video::IImage *RenderingEngine::get_screenshot() {
+	return core->get_screenshot();
 }
 
 bool RenderingEngine::setupTopLevelWindow(const std::string &name)
