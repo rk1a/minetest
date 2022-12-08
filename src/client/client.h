@@ -412,7 +412,7 @@ public:
 	void showMinimap(bool show = true);
 
 	// sends data out
-	OutputImage getSendableData(core::position2di cursorPosition, bool isMenuActive, irr::video::IImage* cursorImage);
+	OutputObservation getSendableData(core::position2di cursorPosition, bool isMenuActive, irr::video::IImage* cursorImage);
 
 	const Address getServerAddress();
 

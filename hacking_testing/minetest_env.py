@@ -124,7 +124,7 @@ class Minetest(gym.Env):
     def __init__(
         self,
         socket_port: int = 5555,
-        minetest_executable: os.PathLike = None, 
+        minetest_executable: os.PathLike = None,
         log_dir: os.PathLike = None,
         config_path: os.PathLike = None,
     ):
@@ -175,11 +175,11 @@ class Minetest(gym.Env):
     def reset(self):
         print("Waiting for obs...")
         byte_obs = self.socket.recv()
-        pb_img = dumb_outputs.OutputImage()
-        pb_img.ParseFromString(byte_obs)
-        obs = np.frombuffer(pb_img.data, dtype=np.uint8).reshape(
-            pb_img.height,
-            pb_img.width,
+        pb_obs = dumb_outputs.OutputObservation()
+        pb_obs.ParseFromString(byte_obs)
+        obs = np.frombuffer(pb_obs.data, dtype=np.uint8).reshape(
+            pb_obs.height,
+            pb_obs.width,
             3,
         )
         self.last_obs = obs
@@ -207,14 +207,14 @@ class Minetest(gym.Env):
         for process in [self.server_process, self.client_process]:
             if process.poll() is not None:
                 return self.last_obs, 0.0, True, {}
-        
+
         print("Waiting for obs...")
-        byte_next_obs = self.socket.recv()
-        pb_img = dumb_outputs.OutputImage()
-        pb_img.ParseFromString(byte_next_obs)
-        next_obs = np.frombuffer(pb_img.data, dtype=np.uint8).reshape(
-            pb_img.height,
-            pb_img.width,
+        byte_obs = self.socket.recv()
+        pb_obs = dumb_outputs.OutputObservation()
+        pb_obs.ParseFromString(byte_obs)
+        next_obs = np.frombuffer(pb_obs.data, dtype=np.uint8).reshape(
+            pb_obs.height,
+            pb_obs.width,
             3,
         )
         self.last_obs = next_obs

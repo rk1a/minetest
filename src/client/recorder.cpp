@@ -21,7 +21,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "client/dumb_outputs.pb.h"
 
 void Recorder::sendDataOut(bool isMenuActive, irr::video::IImage* cursorImage, Client *client, InputHandler *input) {
-    OutputImage data = client->getSendableData(input->getMousePos(), isMenuActive, cursorImage);
+    OutputObservation data = client->getSendableData(input->getMousePos(), isMenuActive, cursorImage);
     std::string msg = data.SerializeAsString();
     sender->send(msg);
 }

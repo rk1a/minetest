@@ -1891,12 +1891,12 @@ void Client::makeScreenshot()
 	raw_image->drop();
 }
 
-OutputImage Client::getSendableData(core::position2di cursorPosition, bool isMenuActive, irr::video::IImage* cursorImage) {
+OutputObservation Client::getSendableData(core::position2di cursorPosition, bool isMenuActive, irr::video::IImage* cursorImage) {
 	irr::video::IVideoDriver *driver = m_rendering_engine->get_video_driver();
 	irr::video::IImage* const raw_image = driver->createScreenShot();
 
 	if (!raw_image)
-		return OutputImage();
+		return OutputObservation();
 
 	irr::video::IImage* const image =
 			driver->createImage(video::ECF_R8G8B8, raw_image->getDimension());
@@ -1912,7 +1912,7 @@ OutputImage Client::getSendableData(core::position2di cursorPosition, bool isMen
 	
 	auto dim = image->getDimension();
 	std::string imageData = std::string((char*)image->getData(), image->getImageDataSizeInBytes());
-	OutputImage data;
+	OutputObservation data;
 	data.set_data(imageData);
 	data.set_width(dim.Width);
 	data.set_height(dim.Height);
