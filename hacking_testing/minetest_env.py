@@ -1,6 +1,7 @@
 import os
 import subprocess
 import uuid
+import atexit
 
 import gym
 import matplotlib.pyplot as plt
@@ -125,7 +126,8 @@ class Minetest(gym.Env):
         socket_port: int = 5555,
         minetest_executable: os.PathLike = None, 
         log_dir: os.PathLike = None,
-        config_path: os.PathLike = None
+        config_path: os.PathLike = None,
+        cursor_path: os.PathLike = None
     ):
         # Define action and observation space
         self.action_space = Dict(
@@ -150,12 +152,14 @@ class Minetest(gym.Env):
             log_dir = os.path.join(root_dir, "log")
         if config_path is None:
             config_path = os.path.join(root_dir, "minetest.conf")
+        if cursor_path is None:
+            cursor_path = os.path.join(root_dir, "cursors/mouse_cursor_white_16x16.png")
 
         # Start Minetest server and client
         self.server_process = start_minetest_server(
             minetest_executable, config_path, log_dir, "newworld"
         )
-        self.client_process = start_minetest_client(minetest_executable, log_dir, socket_port)
+        self.client_process = start_minetest_client(minetest_executable, log_dir, socket_port, cursor_path)
 
         # Setup ZMQ
         self.socket_port = socket_port
@@ -167,34 +171,31 @@ class Minetest(gym.Env):
         self.render_fig = None
         self.render_img = None
 
+        atexit.register(self.close)
+
     def reset(self):
         print("Waiting for obs...")
-        byte_obs = self.socket.recv()
-        obs = np.frombuffer(byte_obs, dtype=np.uint8).reshape(
-            DISPLAY_SIZE[1],
-            DISPLAY_SIZE[0],
-            3,
-        )
+        while True:
+            byte_obs = self.socket.recv()
+            try:
+                obs = np.frombuffer(byte_obs, dtype=np.uint8).reshape(
+                    DISPLAY_SIZE[1],
+                    DISPLAY_SIZE[0],
+                    3,
+                )
+            except ValueError:
+                print("Zero packet received...")
+                self.send_action(self.action_space.sample())
+            else:
+                break
         self.last_obs = obs
         print("Received obs: {}".format(obs.shape))
         return obs
+        
 
     def step(self, action):
-        # make mouse action serializable
-        pb_action = dumb_inputs.InputAction()
-        pb_action.mouseDx, pb_action.mouseDy = action["mouse"]
-        for key, v in action.items():
-            if key == "mouse":
-                continue
-            pb_action.keyEvents.append(
-                dumb_inputs.KeyboardEvent(
-                    key=key,
-                    eventType=dumb_inputs.PRESS if v else dumb_inputs.RELEASE,
-                ),
-            )
-
         print("Sending action: {}".format(action))
-        self.socket.send(pb_action.SerializeToString())
+        self.send_action(action)
 
         # TODO more robust check for whether a server/client is alive while receiving observations
         for process in [self.server_process, self.client_process]:
@@ -215,6 +216,21 @@ class Minetest(gym.Env):
         done = False
         info = {}
         return next_obs, rew, done, info
+    
+    def send_action(self, action):
+        # make mouse action serializable
+        pb_action = dumb_inputs.InputAction()
+        pb_action.mouseDx, pb_action.mouseDy = action["mouse"]
+        for key, v in action.items():
+            if key == "mouse":
+                continue
+            pb_action.keyEvents.append(
+                dumb_inputs.KeyboardEvent(
+                    key=key,
+                    eventType=dumb_inputs.PRESS if v else dumb_inputs.RELEASE,
+                ),
+            )
+        self.socket.send(pb_action.SerializeToString())
 
     def render(self, render_mode: str = "human"):
         if render_mode is None:
@@ -242,7 +258,8 @@ class Minetest(gym.Env):
                 self.render_fig.gca().autoscale_view()
             else:
                 self.render_img.set_data(self.last_obs)
-            plt.draw(), plt.pause(1e-3)
+            plt.draw()
+            plt.pause(1e-3)
         elif render_mode == "rgb_array":
             return self.last_obs
 
