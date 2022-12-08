@@ -1211,7 +1211,6 @@ void Game::run()
 			|| (server && server->isShutdownRequested()))) {
 
 		client->makeScreenshot();
-
 		// send data out
 		std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
 		if(recorder)

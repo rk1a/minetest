@@ -45,6 +45,7 @@ void RenderingCore::initialize()
 	createPipeline();
 }
 
+// #include "client/client.h"
 void RenderingCore::draw(video::SColor _skycolor, bool _show_hud, bool _show_minimap,
 		bool _draw_wield_tool, bool _draw_crosshair)
 {
@@ -62,8 +63,8 @@ void RenderingCore::draw(video::SColor _skycolor, bool _show_hud, bool _show_min
     auto tex = new TextureBufferOutput(buffer, 0);
     pipeline->setRenderTarget(tex);
 
-	for (auto &step: pipeline->m_pipeline)
-		step->setRenderTarget(tex);
+	// for (auto &step: pipeline->m_pipeline)
+	// 	step->setRenderTarget(tex);
 
 	pipeline->reset(context);
 	pipeline->run(context);
@@ -71,25 +72,37 @@ void RenderingCore::draw(video::SColor _skycolor, bool _show_hud, bool _show_min
 	auto t = tex->buffer->getTexture(0);
     auto raw_image = device->getVideoDriver()->createImageFromData(
         t->getColorFormat(),
-        t->getSize(),
+		device->getVideoDriver()->getScreenSize(),
+        // t->getSize(),
         t->lock(irr::video::E_TEXTURE_LOCK_MODE::ETLM_READ_ONLY),
         false  //copy mem
         );
+	// warningstream << "drop" << std::endl;
 	if(screenshot)
 		screenshot->drop();
+	// warningstream << "dropped" << std::endl;
 	screenshot =
 			 device->getVideoDriver()->createImage(video::ECF_R8G8B8,
-			//  device->getVideoDriver()->getScreenSize()
-			 raw_image->getDimension()
+			 device->getVideoDriver()->getScreenSize()
+			//  raw_image->getDimension()
 			 );
 	raw_image->copyTo(screenshot);
+    t->unlock();
+	// warningstream << screenshot << " " << screenshot->getDimension().Width << " " << screenshot->getDimension().Height
+	// 	<< " " << raw_image << " " << raw_image->getDimension().Width << " " << raw_image->getDimension().Height
+	// 	<< " " << device->getVideoDriver()->getScreenSize().Width << " " << device->getVideoDriver()->getScreenSize().Height << std::endl;
+	// if(get_screenshot()) warningstream << get_screenshot()->getDimension().Width << std::endl;
 
 	raw_image->drop();
-    t->unlock();
+	delete tex, buffer;
+	// if(get_screenshot()) warningstream << get_screenshot()->getDimension().Width << std::endl;
 }
 
 video::IImage *RenderingCore::get_screenshot() {
-		return screenshot;
+	if(!screenshot) return nullptr;
+	auto copyScreenshot = device->getVideoDriver()->createImage(video::ECF_R8G8B8, screenshot->getDimension());
+	screenshot->copyTo(copyScreenshot);
+	return copyScreenshot;
 }
 
 v2u32 RenderingCore::getVirtualSize() const

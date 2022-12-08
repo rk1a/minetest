@@ -1825,11 +1825,14 @@ void Client::makeScreenshot()
 {
 	irr::video::IVideoDriver *driver = m_rendering_engine->get_video_driver();
 	// irr::video::IImage* const raw_image = driver->createScreenShot();
+
+	// warningstream << "getting data" << std::endl;
 	irr::video::IImage* raw_image = m_rendering_engine->get_screenshot();
 
 	if (!raw_image)
 		return;
 
+	// warningstream << "got data" << raw_image->getDimension().Width << std::endl;
 	const struct tm tm = mt_localtime();
 
 	char timetstamp_c[64];
@@ -1906,7 +1909,6 @@ std::string Client::getSendableData(core::position2di cursorPosition, bool isMen
 	irr::video::IImage* const image =
 			driver->createImage(video::ECF_R8G8B8, raw_image->getDimension());
 	raw_image->copyTo(image);
-	// raw_image->drop();
 
 	// if provided draw the cursor image at the current mouse position when GUI is open
 	if (isMenuActive && cursorImage) {
@@ -1916,9 +1918,10 @@ std::string Client::getSendableData(core::position2di cursorPosition, bool isMen
 	}
 	
 	auto dim = image->getDimension();
-	warningstream << "Got data; format: " << image->getColorFormat() << "; width: " << dim.Width << ", height: " << dim.Height << std::endl;
+	// warningstream << "Got data; format: " << image->getColorFormat() << "; width: " << dim.Width << ", height: " << dim.Height << std::endl;
 	std::string data = std::string((char*)image->getData(), image->getImageDataSizeInBytes());
 	image->drop();
+	raw_image->drop();
 	return data;
 }
 

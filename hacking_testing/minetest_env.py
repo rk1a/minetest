@@ -1,6 +1,7 @@
 import os
 import subprocess
 import uuid
+import atexit
 
 import gym
 import matplotlib.pyplot as plt
@@ -170,6 +171,8 @@ class Minetest(gym.Env):
         self.render_fig = None
         self.render_img = None
 
+        atexit.register(self.close)
+
     def reset(self):
         print("Waiting for obs...")
         while True:
@@ -255,7 +258,8 @@ class Minetest(gym.Env):
                 self.render_fig.gca().autoscale_view()
             else:
                 self.render_img.set_data(self.last_obs)
-            plt.draw(), plt.pause(1e-3)
+            plt.draw()
+            plt.pause(1e-3)
         elif render_mode == "rgb_array":
             return self.last_obs
 
