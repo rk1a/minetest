@@ -85,8 +85,6 @@ RenderingEngine::RenderingEngine(IEventReceiver *receiver)
 {
 	sanity_check(!s_singleton);
 
-	SDL_VideoInit("offscreen");
-
 	// Resolution selection
 	bool fullscreen = g_settings->getBool("fullscreen");
 #ifdef __ANDROID__
@@ -659,3 +657,4 @@ float RenderingEngine::getDisplayDensity()
 }
 
 #endif // __ANDROID__
+

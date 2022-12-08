@@ -1,7 +1,6 @@
 import os
 import subprocess
 import uuid
-import atexit
 
 import gym
 import matplotlib.pyplot as plt
@@ -9,6 +8,7 @@ import numpy as np
 import zmq
 from gym.spaces import Box, Dict, Discrete
 from proto_python.client import dumb_inputs_pb2 as dumb_inputs
+from proto_python.client import dumb_outputs_pb2 as dumb_outputs
 
 # TODO read from the minetest.conf file
 DISPLAY_SIZE = (1024, 600)
@@ -124,10 +124,9 @@ class Minetest(gym.Env):
     def __init__(
         self,
         socket_port: int = 5555,
-        minetest_executable: os.PathLike = None, 
+        minetest_executable: os.PathLike = None,
         log_dir: os.PathLike = None,
         config_path: os.PathLike = None,
-        cursor_path: os.PathLike = None
     ):
         # Define action and observation space
         self.action_space = Dict(
@@ -152,14 +151,16 @@ class Minetest(gym.Env):
             log_dir = os.path.join(root_dir, "log")
         if config_path is None:
             config_path = os.path.join(root_dir, "minetest.conf")
-        if cursor_path is None:
-            cursor_path = os.path.join(root_dir, "cursors/mouse_cursor_white_16x16.png")
 
+        # TODO we might want to also restart server and/or client when calling reset()
+        # in some situations, e.g. in episodic RL tasks the world should be reset
         # Start Minetest server and client
         self.server_process = start_minetest_server(
-            minetest_executable, config_path, log_dir, "newworld"
+            minetest_executable, config_path, log_dir, "newworld",
         )
-        self.client_process = start_minetest_client(minetest_executable, log_dir, socket_port, cursor_path)
+        self.client_process = start_minetest_client(
+            minetest_executable, log_dir, socket_port,
+        )
 
         # Setup ZMQ
         self.socket_port = socket_port
@@ -171,53 +172,21 @@ class Minetest(gym.Env):
         self.render_fig = None
         self.render_img = None
 
-        atexit.register(self.close)
-
     def reset(self):
         print("Waiting for obs...")
-        while True:
-            byte_obs = self.socket.recv()
-            try:
-                obs = np.frombuffer(byte_obs, dtype=np.uint8).reshape(
-                    DISPLAY_SIZE[1],
-                    DISPLAY_SIZE[0],
-                    3,
-                )
-            except ValueError:
-                print("Zero packet received...")
-                self.send_action(self.action_space.sample())
-            else:
-                break
+        byte_obs = self.socket.recv()
+        pb_obs = dumb_outputs.OutputObservation()
+        pb_obs.ParseFromString(byte_obs)
+        obs = np.frombuffer(pb_obs.data, dtype=np.uint8).reshape(
+            pb_obs.height,
+            pb_obs.width,
+            3,
+        )
         self.last_obs = obs
         print("Received obs: {}".format(obs.shape))
         return obs
-        
 
     def step(self, action):
-        print("Sending action: {}".format(action))
-        self.send_action(action)
-
-        # TODO more robust check for whether a server/client is alive while receiving observations
-        for process in [self.server_process, self.client_process]:
-            if process.poll() is not None:
-                return self.last_obs, 0.0, True, {}
-        
-        print("Waiting for obs...")
-        byte_next_obs = self.socket.recv()
-        next_obs = np.frombuffer(byte_next_obs, dtype=np.uint8).reshape(
-            DISPLAY_SIZE[1],
-            DISPLAY_SIZE[0],
-            3,
-        )
-        self.last_obs = next_obs
-        print("Received obs: {}".format(next_obs.shape))
-        # TODO receive rewards etc.
-        rew = 0.0
-        done = False
-        info = {}
-        return next_obs, rew, done, info
-    
-    def send_action(self, action):
         # make mouse action serializable
         pb_action = dumb_inputs.InputAction()
         pb_action.mouseDx, pb_action.mouseDy = action["mouse"]
@@ -230,7 +199,31 @@ class Minetest(gym.Env):
                     eventType=dumb_inputs.PRESS if v else dumb_inputs.RELEASE,
                 ),
             )
+
+        print("Sending action: {}".format(action))
         self.socket.send(pb_action.SerializeToString())
+
+        # TODO more robust check for whether a server/client is alive while receiving observations
+        for process in [self.server_process, self.client_process]:
+            if process.poll() is not None:
+                return self.last_obs, 0.0, True, {}
+
+        print("Waiting for obs...")
+        byte_obs = self.socket.recv()
+        pb_obs = dumb_outputs.OutputObservation()
+        pb_obs.ParseFromString(byte_obs)
+        next_obs = np.frombuffer(pb_obs.data, dtype=np.uint8).reshape(
+            pb_obs.height,
+            pb_obs.width,
+            3,
+        )
+        self.last_obs = next_obs
+        print("Received obs: {}".format(next_obs.shape))
+        # TODO receive rewards etc.
+        rew = 0.0
+        done = False
+        info = {}
+        return next_obs, rew, done, info
 
     def render(self, render_mode: str = "human"):
         if render_mode is None:
@@ -258,8 +251,7 @@ class Minetest(gym.Env):
                 self.render_fig.gca().autoscale_view()
             else:
                 self.render_img.set_data(self.last_obs)
-            plt.draw()
-            plt.pause(1e-3)
+            plt.draw(), plt.pause(1e-3)
         elif render_mode == "rgb_array":
             return self.last_obs
 
