@@ -35,7 +35,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "inputhandler.h"
 #include "gettext.h"
 #include "../gui/guiSkin.h"
-#include "CIrrDeviceSDL.h"
+#include <SDL_video.h>
 
 #if !defined(_WIN32) && !defined(__APPLE__) && !defined(__ANDROID__) && \
 		!defined(SERVER) && !defined(__HAIKU__)
