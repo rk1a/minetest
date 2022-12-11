@@ -171,9 +171,8 @@ class Minetest(gym.Env):
         self.last_obs = None
         self.render_fig = None
         self.render_img = None
-
-    def reset(self):
-        print("Waiting for obs...")
+    
+    def recv(self):
         byte_obs = self.socket.recv()
         pb_obs = dumb_outputs.OutputObservation()
         pb_obs.ParseFromString(byte_obs)
@@ -183,6 +182,11 @@ class Minetest(gym.Env):
             3,
         )
         self.last_obs = obs
+        return obs
+
+    def reset(self):
+        print("Waiting for obs...")
+        obs = self.recv()
         print("Received obs: {}".format(obs.shape))
         return obs
 
@@ -209,15 +213,7 @@ class Minetest(gym.Env):
                 return self.last_obs, 0.0, True, {}
 
         print("Waiting for obs...")
-        byte_obs = self.socket.recv()
-        pb_obs = dumb_outputs.OutputObservation()
-        pb_obs.ParseFromString(byte_obs)
-        next_obs = np.frombuffer(pb_obs.data, dtype=np.uint8).reshape(
-            pb_obs.height,
-            pb_obs.width,
-            3,
-        )
-        self.last_obs = next_obs
+        next_obs = self.recv()
         print("Received obs: {}".format(next_obs.shape))
         # TODO receive rewards etc.
         rew = 0.0
