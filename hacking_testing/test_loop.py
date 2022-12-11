@@ -1,6 +1,7 @@
 from minetest_env import Minetest
 
-env = Minetest()
+seed = 42
+env = Minetest(seed=seed)
 obs = env.reset()
 render = False
 done = False
