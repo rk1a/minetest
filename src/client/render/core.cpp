@@ -57,11 +57,10 @@ void RenderingCore::draw(video::SColor _skycolor, bool _show_hud, bool _show_min
 	context.show_hud = _show_hud;
 	context.show_minimap = _show_minimap;
 
-	TextureBuffer buffer = TextureBuffer();
-    buffer.setTexture(0, v2f(1.0f, 1.0f), "idk_lol", video::ECF_R8G8B8);
-    TextureBufferOutput tex = TextureBufferOutput(&buffer, 0);
-    pipeline->setRenderTarget(&tex);
-	buffer.reset(context);
+	TextureBuffer *buffer = pipeline->createOwned<TextureBuffer>();
+    buffer->setTexture(0, v2f(1.0f, 1.0f), "idk_lol", video::ECF_R8G8B8);
+    auto tex = new TextureBufferOutput(buffer, 0);
+    pipeline->setRenderTarget(tex);
 
 	// for (auto &step: pipeline->m_pipeline)
 	// 	step->setRenderTarget(tex);
@@ -69,9 +68,7 @@ void RenderingCore::draw(video::SColor _skycolor, bool _show_hud, bool _show_min
 	pipeline->reset(context);
 	pipeline->run(context);
 
-	auto t = tex.buffer->getTexture(0);
-
-// if(!screenshot) {
+	auto t = tex->buffer->getTexture(0);
     auto raw_image = device->getVideoDriver()->createImageFromData(
         t->getColorFormat(),
 		device->getVideoDriver()->getScreenSize(),
@@ -90,8 +87,7 @@ void RenderingCore::draw(video::SColor _skycolor, bool _show_hud, bool _show_min
     t->unlock();
 
 	raw_image->drop();
-// }
-	t->drop();
+	delete tex, buffer;
 }
 
 video::IImage *RenderingCore::get_screenshot() {

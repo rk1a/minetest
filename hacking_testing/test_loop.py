@@ -3,7 +3,7 @@ from minetest_env import Minetest
 
 env = Minetest()
 obs = env.reset()
-render = False
+render = True
 done = False
 while not done:
     try:
