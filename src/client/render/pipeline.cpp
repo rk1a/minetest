@@ -201,10 +201,13 @@ video::ITexture *DynamicSource::getTexture(u8 index)
 
 void ScreenTarget::activate(PipelineContext &context)
 {
-	// auto driver = context.device->getVideoDriver();
-	// driver->setRenderTarget(nullptr, m_clear, m_clear, context.clear_color);
-	// driver->OnResize(size);
-	// RenderTarget::activate(context);
+        #if BUILD_HEADLESS
+        #else
+	auto driver = context.device->getVideoDriver();
+	driver->setRenderTarget(nullptr, m_clear, m_clear, context.clear_color);
+	driver->OnResize(size);
+	RenderTarget::activate(context);
+        #endif
 }
 
 void DynamicTarget::activate(PipelineContext &context)

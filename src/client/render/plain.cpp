@@ -139,9 +139,12 @@ RenderStep* addUpscaling(RenderPipeline *pipeline, RenderStep *previousStep, v2f
 
 void populatePlainPipeline(RenderPipeline *pipeline, Client *client)
 {
-	auto downscale_factor = getDownscaleFactor();
+        #if BUILD_HEADLESS
+        #else
+        pipeline->setRenderTarget(pipeline->createOwned<ScreenTarget>());
+	#endif
+        auto downscale_factor = getDownscaleFactor();
 	auto step3D = pipeline->own(create3DStage(client, downscale_factor));
-	// pipeline->addStep(step3D);
 	pipeline->addStep<MapPostFxStep>();
 
 	step3D = addUpscaling(pipeline, step3D, downscale_factor);

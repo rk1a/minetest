@@ -1824,10 +1824,11 @@ float Client::getCurRate()
 void Client::makeScreenshot()
 {
 	irr::video::IVideoDriver *driver = m_rendering_engine->get_video_driver();
-	// irr::video::IImage* const raw_image = driver->createScreenShot();
-
-	// warningstream << "getting data" << std::endl;
-	irr::video::IImage* raw_image = m_rendering_engine->get_screenshot();
+        #if BUILD_HEADLESS
+	irr::video::IImage* const raw_image = driver->createScreenShot();
+        #else
+        irr::video::IImage* raw_image = m_rendering_engine->get_screenshot();
+        #endif
 
 	if (!raw_image)
 		return;
@@ -1897,8 +1898,11 @@ void Client::makeScreenshot()
 
 OutputObservation Client::getSendableData(core::position2di cursorPosition, bool isMenuActive, irr::video::IImage* cursorImage) {
 	irr::video::IVideoDriver *driver = m_rendering_engine->get_video_driver();
-	// irr::video::IImage* const raw_image = driver->createScreenShot();
+	#if BUILD_HEADLESS
 	irr::video::IImage* raw_image = m_rendering_engine->get_screenshot();
+        #else
+        irr::video::IImage* const raw_image = driver->createScreenShot();
+        #endif
 
 	if (!raw_image)
 		return OutputObservation();

@@ -142,7 +142,9 @@ RenderingEngine::RenderingEngine(IEventReceiver *receiver)
 	params.OGLES2ShaderPath = (porting::path_share + DIR_DELIM + rel_path + DIR_DELIM).c_str();
 #endif
 
+        #if BUILD_HEADLESS
 	SDL_VideoInit("offscreen");
+        #endif
 
 	m_device = createDeviceEx(params);
 	driver = m_device->getVideoDriver();
