@@ -47,6 +47,7 @@ log/*
 
 # Python
 **/__pycache__/
+__pycache__/
 
 newworld/
 ## Non-static Minetest directories or symlinks to these

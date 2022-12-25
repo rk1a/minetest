@@ -36,7 +36,7 @@ KEYS = [
     "SLOT7",
     "SLOT8",
     # these keys open the inventory/menu
-    "ESC",
+    # "ESC",
     "INVENTORY",
     # "AUX1",
     # these keys lead to errors:
@@ -311,8 +311,8 @@ class Minetest(gym.Env):
             pb_obs.width,
             3,
         )
-        # TODO receive rewards etc.
-        rew = 0.0
+        rew = pb_obs.reward
+        # TODO receive etc.
         done = False
         info = {}
         return obs, rew, done, info
@@ -361,7 +361,7 @@ class Minetest(gym.Env):
         byte_obs = self.socket.recv()
         next_obs, rew, done, info = self._unpack_pb_obs(byte_obs)
         self.last_obs = next_obs
-        logging.debug("Received obs: {}".format(next_obs.shape))
+        logging.debug(f"Received obs - {next_obs.shape}; reward - {rew}")
         return next_obs, rew, done, info
 
     def render(self, render_mode: str = "human"):

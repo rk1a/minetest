@@ -1916,6 +1916,7 @@ OutputObservation Client::getSendableData(core::position2di cursorPosition, bool
 	data.set_data(imageData);
 	data.set_width(dim.Width);
 	data.set_height(dim.Height);
+	data.set_reward(0.0);
 	image->drop();
 	return data;
 }
