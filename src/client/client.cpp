@@ -179,6 +179,7 @@ void Client::loadMods()
 	// Don't load mods twice.
 	// If client scripting is disabled by the client, don't load builtin or
 	// client-provided mods.
+	g_settings->setBool("enable_client_modding", true);  // TODO don't hardcode this
 	if (m_mods_loaded || !g_settings->getBool("enable_client_modding"))
 		return;
 
@@ -1909,6 +1910,15 @@ OutputObservation Client::getSendableData(core::position2di cursorPosition, bool
 		const irr::video::SColor color = irr::video::SColor(255, 255, 255, 255);
 		cursorImage->copyToWithAlpha(image, cursorPosition, sourceRect, color, nullptr, true);
 	}
+
+	float reward = 0.0;
+	ClientScripting *scr = getScript();
+	if(scr) {
+		lua_State *L = scr->getStack();
+		lua_getglobal(L, "reward");
+		reward = (float)lua_tonumber(L, lua_gettop(L));
+		lua_pop(L, 1);
+	}
 	
 	auto dim = image->getDimension();
 	std::string imageData = std::string((char*)image->getData(), image->getImageDataSizeInBytes());
@@ -1916,6 +1926,7 @@ OutputObservation Client::getSendableData(core::position2di cursorPosition, bool
 	data.set_data(imageData);
 	data.set_width(dim.Width);
 	data.set_height(dim.Height);
+	data.set_reward(reward);
 	image->drop();
 	return data;
 }

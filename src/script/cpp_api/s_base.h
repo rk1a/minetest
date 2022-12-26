@@ -118,16 +118,7 @@ public:
 	// Check things that should be set by the builtin mod.
 	void checkSetByBuiltin();
 
-protected:
-	friend class LuaABM;
-	friend class LuaLBM;
-	friend class InvRef;
-	friend class ObjectRef;
-	friend class NodeMetaRef;
-	friend class ModApiBase;
-	friend class ModApiEnvMod;
-	friend class LuaVoxelManip;
-
+	// TODO make friend
 	/*
 		Subtle edge case with coroutines: If for whatever reason you have a
 		method in a subclass that's called from existing lua_CFunction
@@ -139,6 +130,16 @@ protected:
 	*/
 	lua_State* getStack()
 		{ return m_luastack; }
+
+protected:
+	friend class LuaABM;
+	friend class LuaLBM;
+	friend class InvRef;
+	friend class ObjectRef;
+	friend class NodeMetaRef;
+	friend class ModApiBase;
+	friend class ModApiEnvMod;
+	friend class LuaVoxelManip;
 
 	// Checks that stack size is sane
 	void realityCheck();
