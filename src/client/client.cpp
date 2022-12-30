@@ -1891,12 +1891,12 @@ void Client::makeScreenshot()
 	raw_image->drop();
 }
 
-OutputObservation Client::getSendableData(core::position2di cursorPosition, bool isMenuActive, irr::video::IImage* cursorImage) {
+pb_objects::Image Client::getSendableData(core::position2di cursorPosition, bool isMenuActive, irr::video::IImage* cursorImage) {
 	irr::video::IVideoDriver *driver = m_rendering_engine->get_video_driver();
 	irr::video::IImage* const raw_image = driver->createScreenShot();
 
 	if (!raw_image)
-		return OutputObservation();
+		return pb_objects::Image();
 
 	irr::video::IImage* const image =
 			driver->createImage(video::ECF_R8G8B8, raw_image->getDimension());
@@ -1912,12 +1912,12 @@ OutputObservation Client::getSendableData(core::position2di cursorPosition, bool
 	
 	auto dim = image->getDimension();
 	std::string imageData = std::string((char*)image->getData(), image->getImageDataSizeInBytes());
-	OutputObservation data;
-	data.set_data(imageData);
-	data.set_width(dim.Width);
-	data.set_height(dim.Height);
+	pb_objects::Image pb_img;
+	pb_img.set_data(imageData);
+	pb_img.set_width(dim.Width);
+	pb_img.set_height(dim.Height);
 	image->drop();
-	return data;
+	return pb_img;
 }
 
 bool Client::shouldShowMinimap() const
