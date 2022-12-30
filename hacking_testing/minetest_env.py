@@ -10,46 +10,81 @@ from typing import Any, Dict, Optional, Tuple
 import gym
 import matplotlib.pyplot as plt
 import numpy as np
+import proto_python.objects_pb2 as pb_objects
 import zmq
-from proto_python.client import dumb_inputs_pb2 as dumb_inputs
-from proto_python.client import dumb_outputs_pb2 as dumb_outputs
+from proto_python.objects_pb2 import KeyType
 
-KEYS = [
-    "FORWARD",
-    "BACKWARD",
-    "LEFT",
-    "RIGHT",
-    "JUMP",
-    "SNEAK",
-    "DIG",  # left mouse
-    "MIDDLE",  # middle mouse
-    "PLACE",  # right mouse
-    "DROP",
-    "HOTBAR_NEXT",
-    "HOTBAR_PREVIOUS",
-    "SLOT1",
-    "SLOT2",
-    "SLOT3",
-    "SLOT4",
-    "SLOT5",
-    "SLOT6",
-    "SLOT7",
-    "SLOT8",
-    # these keys open the inventory/menu
-    "ESC",
-    "INVENTORY",
-    # "AUX1",
-    # these keys lead to errors:
-    # "CHAT", "CMD",
-    # these keys are probably uninteresting
-    # "zoom",
-    # "autoforward",
-    # "pitchmove",
-    # "freemove",
-    # "fastmove",
-    # "noclip",
-    # "screenshot",
-]
+# Define allowed keys / buttons
+KEY_MAP = {
+    "FORWARD": KeyType.FORWARD,
+    "BACKWARD": KeyType.BACKWARD,
+    "LEFT": KeyType.LEFT,
+    "RIGHT": KeyType.RIGHT,
+    "JUMP": KeyType.JUMP,
+    "SNEAK": KeyType.SNEAK,  # shift key in menus
+    "DIG": KeyType.DIG,  # left mouse button
+    "MIDDLE": KeyType.MIDDLE,  # middle mouse button
+    "PLACE": KeyType.PLACE,  # right mouse button
+    "DROP": KeyType.DROP,
+    "HOTBAR_NEXT": KeyType.HOTBAR_NEXT,  # mouse wheel up
+    "HOTBAR_PREV": KeyType.HOTBAR_PREV,  # mouse wheel down
+    "SLOT_1": KeyType.SLOT_1,
+    "SLOT_2": KeyType.SLOT_2,
+    "SLOT_3": KeyType.SLOT_3,
+    "SLOT_4": KeyType.SLOT_4,
+    "SLOT_5": KeyType.SLOT_5,
+    "SLOT_6": KeyType.SLOT_6,
+    "SLOT_7": KeyType.SLOT_7,
+    "SLOT_8": KeyType.SLOT_8,
+    "INVENTORY": KeyType.INVENTORY,
+    "ESC": KeyType.ESC,
+}
+INV_KEY_MAP = {value: key for key, value in KEY_MAP.items()}
+
+# Define noop action
+NOOP_ACTION = {key: 0 for key in KEY_MAP.keys()}
+NOOP_ACTION.update({"MOUSE": np.zeros(2, dtype=int)})
+
+
+def unpack_pb_obs(received_obs: str):
+    pb_obs = pb_objects.Observation()
+    pb_obs.ParseFromString(received_obs)
+    obs = np.frombuffer(pb_obs.image.data, dtype=np.uint8).reshape(
+        pb_obs.image.height,
+        pb_obs.image.width,
+        3,
+    )
+    last_action = unpack_pb_action(pb_obs.action) if pb_obs.action else None
+    # TODO receive rewards etc.
+    rew = 0.0
+    done = False
+    info = {}
+    return obs, rew, done, info, last_action
+
+
+def unpack_pb_action(pb_action: pb_objects.Action):
+    action = dict(NOOP_ACTION)
+    action["MOUSE"] = [pb_action.mouseDx, pb_action.mouseDy]
+    for key_event in pb_action.keyEvents:
+        if key_event.key in INV_KEY_MAP and key_event.eventType == pb_objects.PRESS:
+            key_name = INV_KEY_MAP[key_event.key]
+            action[key_name] = 1
+    return action
+
+
+def pack_pb_action(action: Dict[str, Any]):
+    pb_action = pb_objects.Action()
+    pb_action.mouseDx, pb_action.mouseDy = action["MOUSE"]
+    for key, v in action.items():
+        if key == "MOUSE":
+            continue
+        pb_action.keyEvents.append(
+            pb_objects.KeyboardEvent(
+                key=KEY_MAP[key],
+                eventType=pb_objects.PRESS if v else pb_objects.RELEASE,
+            ),
+        )
+    return pb_action
 
 
 def start_minetest_server(
@@ -131,6 +166,7 @@ class Minetest(gym.Env):
         display_size: Tuple[int, int] = (1024, 600),
         fov: int = 72,
         seed: Optional[int] = None,
+        start_minetest: Optional[bool] = True,
     ):
         # Graphics settings
         self.display_size = display_size
@@ -142,9 +178,9 @@ class Minetest(gym.Env):
         # Define action and observation space
         self.action_space = gym.spaces.Dict(
             {
-                **{key.lower(): gym.spaces.Discrete(2) for key in KEYS},
+                **{key: gym.spaces.Discrete(2) for key in KEY_MAP.keys()},
                 **{
-                    "mouse": gym.spaces.Box(
+                    "MOUSE": gym.spaces.Box(
                         np.array([-self.max_mouse_move_x, -self.max_mouse_move_y]),
                         np.array([self.max_mouse_move_x, self.max_mouse_move_y]),
                         shape=(2,),
@@ -169,6 +205,7 @@ class Minetest(gym.Env):
         os.makedirs(self.log_dir, exist_ok=True)
         self.world_dir = world_dir
         self.config_path = config_path
+        self.cursor_image_path = cursor_image_path
         if cursor_image_path is None:
             self.cursor_image_path = os.path.join(
                 self.root_dir,
@@ -181,6 +218,9 @@ class Minetest(gym.Env):
 
         # Clean config if no custom config provided
         self.clean_config = self.config_path is None
+
+        # Whether to start minetest server and client
+        self.start_minetest = start_minetest
 
         # Used ports
         self.env_port = env_port  # MT env <-> MT client
@@ -303,63 +343,41 @@ class Minetest(gym.Env):
             self._write_config()
         # TODO seed used libraries, like numpy, pytorch etc.
 
-    def _unpack_pb_obs(self, received_obs: str):
-        pb_obs = dumb_outputs.OutputObservation()
-        pb_obs.ParseFromString(received_obs)
-        obs = np.frombuffer(pb_obs.data, dtype=np.uint8).reshape(
-            pb_obs.height,
-            pb_obs.width,
-            3,
-        )
-        # TODO receive rewards etc.
-        rew = 0.0
-        done = False
-        info = {}
-        return obs, rew, done, info
-
-    def _pack_pb_action(self, action: Dict[str, Any]):
-        pb_action = dumb_inputs.InputAction()
-        pb_action.mouseDx, pb_action.mouseDy = action["mouse"]
-        for key, v in action.items():
-            if key == "mouse":
-                continue
-            pb_action.keyEvents.append(
-                dumb_inputs.KeyboardEvent(
-                    key=key,
-                    eventType=dumb_inputs.PRESS if v else dumb_inputs.RELEASE,
-                ),
-            )
-        return pb_action
-
     def reset(self):
-        if self.reset_world:
-            self._delete_world()
+        if self.start_minetest:
+            if self.reset_world:
+                self._delete_world()
+            self._reset_minetest()
         self._reset_zmq()
-        self._reset_minetest()
 
         # Receive initial observation
         logging.debug("Waiting for first obs...")
         byte_obs = self.socket.recv()
-        obs, _, _, _ = self._unpack_pb_obs(byte_obs)
+        obs, _, _, _, _ = unpack_pb_obs(byte_obs)
         self.last_obs = obs
         logging.debug("Received first obs: {}".format(obs.shape))
         return obs
 
     def step(self, action: Dict[str, Any]):
         # Send action
+        action["MOUSE"] = action["MOUSE"].tolist()
         logging.debug("Sending action: {}".format(action))
-        pb_action = self._pack_pb_action(action)
+        pb_action = pack_pb_action(action)
         self.socket.send(pb_action.SerializeToString())
 
         # TODO more robust check for whether a server/client is alive while receiving observations
         for process in [self.server_process, self.client_process]:
-            if process.poll() is not None:
+            if process is not None and process.poll() is not None:
                 return self.last_obs, 0.0, True, {}
 
         # Receive observation
         logging.debug("Waiting for obs...")
         byte_obs = self.socket.recv()
-        next_obs, rew, done, info = self._unpack_pb_obs(byte_obs)
+        next_obs, rew, done, info, last_action = unpack_pb_obs(byte_obs)
+
+        if last_action:
+            assert action == last_action
+
         self.last_obs = next_obs
         logging.debug("Received obs: {}".format(next_obs.shape))
         return next_obs, rew, done, info

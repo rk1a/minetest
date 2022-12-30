@@ -102,6 +102,39 @@ bool MyEventReceiver::OnEvent(const SEvent &event)
 	if (m_input_blocked) {
 		return true;
 	}
+
+	// For recording: 
+	// Remember whether each key is down or up
+	// even if a menu is open
+	// Note: this does not support joysticks or touch screens
+	if (event.EventType == irr::EET_KEY_INPUT_EVENT) {
+		const KeyPress &keyCode = event.KeyInput;
+		if (event.KeyInput.PressedDown) {
+			recordKeyIsDown.set(keyCode);
+		}
+	} else if (event.EventType == irr::EET_MOUSE_INPUT_EVENT) {
+		// Handle mouse events
+		KeyPress key;
+		switch (event.MouseInput.Event) {
+		case EMIE_LMOUSE_PRESSED_DOWN:
+			key = "KEY_LBUTTON";
+			recordKeyIsDown.set(key);
+			break;
+		case EMIE_MMOUSE_PRESSED_DOWN:
+			key = "KEY_MBUTTON";
+			recordKeyIsDown.set(key);
+			break;
+		case EMIE_RMOUSE_PRESSED_DOWN:
+			key = "KEY_RBUTTON";
+			recordKeyIsDown.set(key);
+			break;
+		case EMIE_MOUSE_WHEEL:
+			record_mouse_wheel += event.MouseInput.Wheel;
+			break;
+		default: break;
+		}
+	}
+
 	/*
 		React to nothing here if a menu is active
 	*/
@@ -111,19 +144,6 @@ bool MyEventReceiver::OnEvent(const SEvent &event)
 			m_touchscreengui->Toggle(false);
 		}
 #endif
-		/*
-		if (event.EventType == irr::EET_KEY_INPUT_EVENT) {
-			std::cout << "key " << event.KeyInput.Key << " pressed? "
-					  << event.KeyInput.PressedDown << " char " << event.KeyInput.Char
-					  << " control " << event.KeyInput.Control << " system "
-					  << event.KeyInput.SystemKeyCode << std::endl;
-		} else if (event.EventType == irr::EET_MOUSE_INPUT_EVENT) {
-			std::cout << "Mouse " << event.MouseInput.X << std::endl;
-		} else if (event.EventType == irr::EET_GUI_EVENT) {
-			std::cout << "GUI EventType " << event.GUIEvent.EventType << std::endl;
-		} else {
-			std::cout << "EventType " << event.EventType << std::endl;
-		}*/
 		return g_menumgr.preprocessEvent(event);
 	}
 

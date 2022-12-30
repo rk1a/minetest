@@ -21,7 +21,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 #include "client/client.h"
 #include "client/renderingengine.h"
-#include "client/dumb_inputs.pb.h"
+#include "objects.pb.h"
 #include "client/inputhandler.h"
 #include "gui/mainmenumanager.h"
 #include <zmqpp/zmqpp.hpp>
@@ -34,6 +34,37 @@ public:
 			m_receiver(receiver)
 	{
 	};
+
+	bool isDumb() const
+	{
+		return true;
+	}
+
+	virtual pb_objects::Action getLastAction() {
+		pb_objects::Action action;
+		action.set_mousedx(mousespeed[0]);
+		action.set_mousedy(mousespeed[1]);
+		for (int i = pb_objects::KeyType::FORWARD; i !=  pb_objects::INTERNAL_ENUM_COUNT; ++i) {
+			pb_objects::KeyboardEvent* ev = action.add_keyevents();
+			pb_objects::KeyType keyType = static_cast<pb_objects::KeyType>(i);
+			ev->set_key(keyType);
+			KeyPress keyPress;
+			if (extraKeys.find(keyType) != extraKeys.end()) {
+				keyPress = extraKeys[keyType];
+			} else {
+				GameKeyType gkey = static_cast<GameKeyType>(i);
+				keyPress = keycache.key[gkey];
+			}
+			bool isDown = m_receiver->recordKeyIsDown[keyPress];
+			if(isDown) {
+				ev->set_eventtype(pb_objects::PRESS);
+			} else {
+				ev->set_eventtype(pb_objects::RELEASE);
+			}
+		}
+		m_receiver->recordKeyIsDown.clear();
+		return action;
+	}
 
 	virtual bool isKeyDown(GameKeyType k) { return keyIsDown[keycache.key[k]]; }
 	virtual bool wasKeyDown(GameKeyType k)
@@ -121,49 +152,6 @@ public:
 	}
 
 	virtual void step(float dtime);
-
-	std::vector<std::string> mouseButtons = {"dig", "middle", "place"};
-	std::unordered_map<std::string, KeyPress> mouseButtonMap = {
-		{"dig", "KEY_LBUTTON"},
-		{"middle", "KEY_MBUTTON"},
-		{"place", "KEY_RBUTTON"},
-	};
-	std::string keyPrefix = "keymap_";
-	// TODO make this configurable?
-	std::vector<std::string> supportedKeys = {
-			"jump",
-			"forward",
-			"backward",
-			"left",
-			"right",
-			"jump",
-			"sneak",
-			"dig",
-			"middle", // middle mouse not part of standard key map
-			"place",
-			"drop",
-			"hotbar_next",
-			"hotbar_previous",
-			"slot1",
-			"slot2",
-			"slot3",
-			"slot4",
-			"slot5",
-			"slot6",
-			"slot7",
-			"slot8",
-			"esc", // esc is not part of the standard key map
-			"inventory",
-			"aux1",
-			// "chat", "cmd", // these result in errors
-			"zoom",
-			"autoforward",
-			"pitchmove",
-			"freemove",
-			"fastmove",
-			"noclip",
-			"screenshot",
-	};
 
 	// ZMQ socket
 	zmqpp::socket *socket;
