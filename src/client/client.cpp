@@ -61,7 +61,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "translation.h"
 #include "content/mod_configuration.h"
 #include "SColor.h"
-#include "client/dumb_outputs.pb.h"
 
 extern gui::IGUIEnvironment* guienv;
 
@@ -179,6 +178,7 @@ void Client::loadMods()
 	// Don't load mods twice.
 	// If client scripting is disabled by the client, don't load builtin or
 	// client-provided mods.
+	g_settings->setBool("enable_client_modding", true);  // TODO don't hardcode this
 	if (m_mods_loaded || !g_settings->getBool("enable_client_modding"))
 		return;
 
@@ -1889,6 +1889,18 @@ void Client::makeScreenshot()
 	}
 
 	raw_image->drop();
+}
+
+float Client::getReward() {
+	float reward = 0.0;
+	//ClientScripting *scr = getScript();
+	//if(scr) {
+	//	lua_State *L = scr->getStack();
+	//	lua_getglobal(L, "reward");
+	//	reward = (float)lua_tonumber(L, lua_gettop(L));
+	//	lua_pop(L, 1);
+	//}
+    return reward;
 }
 
 pb_objects::Image Client::getSendableData(core::position2di cursorPosition, bool isMenuActive, irr::video::IImage* cursorImage) {

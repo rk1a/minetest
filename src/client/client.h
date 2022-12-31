@@ -412,6 +412,7 @@ public:
 	void showMinimap(bool show = true);
 
 	// sends data out
+	float getReward();
 	pb_objects::Image getSendableData(core::position2di cursorPosition, bool isMenuActive, irr::video::IImage* cursorImage);
 
 	const Address getServerAddress();

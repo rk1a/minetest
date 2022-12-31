@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 from minetest_env import Minetest
 
 start_minetest = True

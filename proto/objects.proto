@@ -119,5 +119,6 @@ message Image {
 
 message Observation {
     Image image = 1;
-    optional Action action = 2;
+    float reward = 2;
+    optional Action action = 3;
 }

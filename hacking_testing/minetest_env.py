@@ -55,8 +55,8 @@ def unpack_pb_obs(received_obs: str):
         3,
     )
     last_action = unpack_pb_action(pb_obs.action) if pb_obs.action else None
-    # TODO receive rewards etc.
-    rew = 0.0
+    rew = pb_obs.reward
+    # TODO receive terminal flag and extra infos
     done = False
     info = {}
     return obs, rew, done, info, last_action
@@ -315,6 +315,7 @@ class Minetest(gym.Env):
             # Update default settings
             config_file.write("mute_sound = true\n")
             config_file.write("show_debug = false\n")
+            config_file.write("enable_client_modding = true\n")
 
             # Set display size
             config_file.write(f"screen_w = {self.display_size[0]}\n")
@@ -379,7 +380,7 @@ class Minetest(gym.Env):
             assert action == last_action
 
         self.last_obs = next_obs
-        logging.debug("Received obs: {}".format(next_obs.shape))
+        logging.debug(f"Received obs - {next_obs.shape}; reward - {rew}")
         return next_obs, rew, done, info
 
     def render(self, render_mode: str = "human"):

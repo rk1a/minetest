@@ -28,8 +28,10 @@ void Recorder::setImage(pb_objects::Image & img) {
     imgToSend = img;
 }
 
+// TODO: move OutputObservation creation outside the function
 void Recorder::sendDataOut(bool isMenuActive, irr::video::IImage* cursorImage, Client *client, InputHandler *input) {
     pb_objects::Observation obsToSend;
+    obsToSend.set_reward(client->getReward());
     obsToSend.set_allocated_image(&imgToSend);
     obsToSend.set_allocated_action(&actionToSend);
     std::string msg = obsToSend.SerializeAsString();
