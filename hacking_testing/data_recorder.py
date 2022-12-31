@@ -1,6 +1,7 @@
 import os
 
 import zmq
+from minetest_env import unpack_pb_obs
 
 
 class DataRecorder:
@@ -11,12 +12,15 @@ class DataRecorder:
         timeout: int = 1000,
         max_queue_length: int = 1200,
         max_attempts: int = 10,
+        debug: bool = False,
     ):
         self.target_address = target_address
         self.data_path = data_path
         self.timeout = timeout
         self.max_queue_length = max_queue_length
         self.max_attempts = max_attempts
+        # Debug mode prints received actions and does not save to file
+        self.debug = debug
 
         self._recording = False
 
@@ -45,8 +49,17 @@ class DataRecorder:
                     raw_data = self.socket.recv()
                     num_attempts = 0
 
+                    if self.debug:
+                        _, _, _, _, action = unpack_pb_obs(raw_data)
+                        action_str = ""
+                        for key in action.keys():
+                            if key != "MOUSE" and action[key]:
+                                action_str += key + ", "
+                        print(action_str)
+
                     # Write data to new line
-                    out.write(str(raw_data) + "\n")
+                    if not self.debug:
+                        out.write(str(raw_data) + "\n")
                 except zmq.ZMQError as err:
                     if err.errno == zmq.EAGAIN:
                         print(f"Reception attempts: {num_attempts}")
@@ -63,8 +76,9 @@ class DataRecorder:
 
 
 if __name__ == "__main__":
+    debug = True  # if True, data is not written
     address = "localhost:5555"
     data_dir = "data.bin"
     num_attempts = 10
-    recorder = DataRecorder(data_dir, address, max_attempts=num_attempts)
+    recorder = DataRecorder(data_dir, address, max_attempts=num_attempts, debug=debug)
     recorder.start()  # warning: file quickly grows very large
