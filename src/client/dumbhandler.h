@@ -62,7 +62,6 @@ public:
 				ev->set_eventtype(pb_objects::RELEASE);
 			}
 		}
-		m_receiver->recordKeyIsDown.clear();
 		return action;
 	}
 

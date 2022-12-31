@@ -111,6 +111,8 @@ bool MyEventReceiver::OnEvent(const SEvent &event)
 		const KeyPress &keyCode = event.KeyInput;
 		if (event.KeyInput.PressedDown) {
 			recordKeyIsDown.set(keyCode);
+		} else {
+			recordKeyIsDown.unset(keyCode);
 		}
 	} else if (event.EventType == irr::EET_MOUSE_INPUT_EVENT) {
 		// Handle mouse events
@@ -127,6 +129,18 @@ bool MyEventReceiver::OnEvent(const SEvent &event)
 		case EMIE_RMOUSE_PRESSED_DOWN:
 			key = "KEY_RBUTTON";
 			recordKeyIsDown.set(key);
+			break;
+		case EMIE_LMOUSE_LEFT_UP:
+			key = "KEY_LBUTTON";
+			recordKeyIsDown.unset(key);
+			break;
+		case EMIE_MMOUSE_LEFT_UP:
+			key = "KEY_MBUTTON";
+			recordKeyIsDown.unset(key);
+			break;
+		case EMIE_RMOUSE_LEFT_UP:
+			key = "KEY_RBUTTON";
+			recordKeyIsDown.unset(key);
 			break;
 		case EMIE_MOUSE_WHEEL:
 			record_mouse_wheel += event.MouseInput.Wheel;

@@ -175,10 +175,8 @@ public:
 		keyWasDown.clear();
 		keyWasPressed.clear();
 		keyWasReleased.clear();
-		//recordKeyIsDown.clear();
 
 		mouse_wheel = 0;
-		//record_mouse_wheel = 0;
 	}
 
 	void clearWasKeyPressed()
@@ -340,7 +338,6 @@ public:
 				ev->set_eventtype(pb_objects::RELEASE);
 			}
 		}
-		m_receiver->recordKeyIsDown.clear();
 		return action;
 	}
 

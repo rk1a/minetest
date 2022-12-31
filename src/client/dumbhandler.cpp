@@ -110,7 +110,7 @@ void DumbClientInputHandler::step(float dtime) {
                     keyWasPressed.set(key);
                 } else {
                     keyIsDown.unset(key);
-                    m_receiver->recordKeyIsDown.unset(key); // uneccesary
+                    m_receiver->recordKeyIsDown.unset(key);
                     keyWasReleased.set(key);
                 }
             } else {
