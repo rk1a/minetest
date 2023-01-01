@@ -69,6 +69,8 @@ newworld/
 /world/
 /clientmods/*
 !/clientmods/preview/
+!/clientmods/rewards/
+!/clientmods/mods.conf
 /client/mod_storage/
 
 ## Configuration/log files
