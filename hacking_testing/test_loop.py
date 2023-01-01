@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 from minetest_env import Minetest
 
-seed = 42
-env = Minetest(seed=seed)
-obs = env.reset()
+start_minetest = True
 render = False
+seed = 42
+env = Minetest(seed=seed, start_minetest=start_minetest)
+obs = env.reset()
 done = False
 while not done:
     try:

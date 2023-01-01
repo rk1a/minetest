@@ -18,11 +18,24 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 */
 
 #include "client/recorder.h"
-#include "client/dumb_outputs.pb.h"
+#include "objects.pb.h"
+
+void Recorder::setAction(pb_objects::Action & action) {
+    actionToSend = action;
+}
+
+void Recorder::setImage(pb_objects::Image & img) {
+    imgToSend = img;
+}
 
 // TODO: move OutputObservation creation outside the function
 void Recorder::sendDataOut(bool isMenuActive, irr::video::IImage* cursorImage, Client *client, InputHandler *input) {
-    OutputObservation data = client->getSendableData(input->getMousePos(), isMenuActive, cursorImage);
-    std::string msg = data.SerializeAsString();
+    pb_objects::Observation obsToSend;
+    obsToSend.set_reward(client->getReward());
+    obsToSend.set_allocated_image(&imgToSend);
+    obsToSend.set_allocated_action(&actionToSend);
+    std::string msg = obsToSend.SerializeAsString();
+    obsToSend.release_image();
+    obsToSend.release_action();
     sender->send(msg);
 }

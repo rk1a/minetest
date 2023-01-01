@@ -61,7 +61,6 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "translation.h"
 #include "content/mod_configuration.h"
 #include "SColor.h"
-#include "client/dumb_outputs.pb.h"
 
 extern gui::IGUIEnvironment* guienv;
 
@@ -1892,12 +1891,28 @@ void Client::makeScreenshot()
 	raw_image->drop();
 }
 
-OutputObservation Client::getSendableData(core::position2di cursorPosition, bool isMenuActive, irr::video::IImage* cursorImage) {
+float Client::getReward() {
+	float reward = 0.0;
+	try {
+		ClientScripting *scr = getScript();
+		if(scr) {
+			lua_State *L = scr->getStack();
+			lua_getglobal(L, "reward");
+			reward = (float)lua_tonumber(L, lua_gettop(L));
+			lua_pop(L, 1);
+		}
+	} catch(...) { // TODO improve error handling
+		warningstream << "No reward mod active!" << std::endl;
+	}
+    return reward;
+}
+
+pb_objects::Image Client::getSendableData(core::position2di cursorPosition, bool isMenuActive, irr::video::IImage* cursorImage) {
 	irr::video::IVideoDriver *driver = m_rendering_engine->get_video_driver();
 	irr::video::IImage* const raw_image = driver->createScreenShot();
 
 	if (!raw_image)
-		return OutputObservation();
+		return pb_objects::Image();
 
 	irr::video::IImage* const image =
 			driver->createImage(video::ECF_R8G8B8, raw_image->getDimension());
@@ -1910,25 +1925,15 @@ OutputObservation Client::getSendableData(core::position2di cursorPosition, bool
 		const irr::video::SColor color = irr::video::SColor(255, 255, 255, 255);
 		cursorImage->copyToWithAlpha(image, cursorPosition, sourceRect, color, nullptr, true);
 	}
-
-	float reward = 0.0;
-	ClientScripting *scr = getScript();
-	if(scr) {
-		lua_State *L = scr->getStack();
-		lua_getglobal(L, "reward");
-		reward = (float)lua_tonumber(L, lua_gettop(L));
-		lua_pop(L, 1);
-	}
 	
 	auto dim = image->getDimension();
 	std::string imageData = std::string((char*)image->getData(), image->getImageDataSizeInBytes());
-	OutputObservation data;
-	data.set_data(imageData);
-	data.set_width(dim.Width);
-	data.set_height(dim.Height);
-	data.set_reward(reward);
+	pb_objects::Image pb_img;
+	pb_img.set_data(imageData);
+	pb_img.set_width(dim.Width);
+	pb_img.set_height(dim.Height);
 	image->drop();
-	return data;
+	return pb_img;
 }
 
 bool Client::shouldShowMinimap() const

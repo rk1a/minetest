@@ -41,7 +41,7 @@ message(STATUS "*** Will build version ${VERSION_STRING} ***")
 
 
 # Configuration options
-set(DEFAULT_RUN_IN_PLACE FALSE)
+set(DEFAULT_RUN_IN_PLACE TRUE)
 if(WIN32)
 	set(DEFAULT_RUN_IN_PLACE TRUE)
 endif()
