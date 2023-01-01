@@ -1893,13 +1893,13 @@ void Client::makeScreenshot()
 
 float Client::getReward() {
 	float reward = 0.0;
-	//ClientScripting *scr = getScript();
-	//if(scr) {
-	//	lua_State *L = scr->getStack();
-	//	lua_getglobal(L, "reward");
-	//	reward = (float)lua_tonumber(L, lua_gettop(L));
-	//	lua_pop(L, 1);
-	//}
+	ClientScripting *scr = getScript();
+	if(scr) {
+		lua_State *L = scr->getStack();
+		lua_getglobal(L, "reward");
+		reward = (float)lua_tonumber(L, lua_gettop(L));
+		lua_pop(L, 1);
+	}
     return reward;
 }
 
