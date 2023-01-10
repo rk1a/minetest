@@ -69,7 +69,7 @@ newworld/
 /world/
 /clientmods/*
 !/clientmods/preview/
-!/clientmods/rewards/
+!/clientmods/treechop/
 !/clientmods/mods.conf
 /client/mod_storage/
 
