@@ -5,7 +5,7 @@ import random
 import shutil
 import subprocess
 import uuid
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import gym
 import matplotlib.pyplot as plt
@@ -167,15 +167,15 @@ class Minetest(gym.Env):
         fov: int = 72,
         seed: Optional[int] = None,
         start_minetest: Optional[bool] = True,
+        clientmods: List[str] = [],
     ):
         # Graphics settings
         self.display_size = display_size
         self.fov_y = fov
         self.fov_x = self.fov_y * self.display_size[0] / self.display_size[1]
-        self.max_mouse_move_x = 180 / self.fov_x * self.display_size[0]
-        self.max_mouse_move_y = 180 / self.fov_y * self.display_size[1]
-
         # Define action and observation space
+        self.max_mouse_move_x = self.display_size[0]
+        self.max_mouse_move_y = self.display_size[1]
         self.action_space = gym.spaces.Dict(
             {
                 **{key: gym.spaces.Discrete(2) for key in KEY_MAP.keys()},
@@ -198,6 +198,7 @@ class Minetest(gym.Env):
 
         # Define Minetest paths
         self.root_dir = os.path.dirname(os.path.dirname(__file__))
+        self.minetest_executable = minetest_executable
         if minetest_executable is None:
             self.minetest_executable = os.path.join(self.root_dir, "bin", "minetest")
         if log_dir is None:
@@ -241,17 +242,36 @@ class Minetest(gym.Env):
 
         # Seed the environment
         self.unique_env_id = str(uuid.uuid4())  # fallback UUID when no seed is provided
-        if seed:
+        if seed is not None:
             self.seed(seed)
 
         # Configure logging
         logging.basicConfig(
             filename=os.path.join(self.log_dir, f"env_{self.unique_env_id}.log"),
             filemode="a",
-            format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s',
-            datefmt='%H:%M:%S',
+            format="%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s",
+            datefmt="%H:%M:%S",
             level=logging.DEBUG,
         )
+
+        # Configure mods
+        self.clientmods = clientmods + ["rewards"]  # require the base rewards mod
+        clientmods_folder = os.path.realpath(
+            os.path.join(os.path.dirname(self.minetest_executable), "../clientmods"),
+        )
+        if not os.path.exists(clientmods_folder):
+            raise ValueError(f"Clientmods must be located at {clientmods_folder}!")
+        # Write mods.conf
+        with open(os.path.join(clientmods_folder, "mods.conf"), "w") as mods_config:
+            for clientmod in self.clientmods:
+                clientmod_folder = os.path.join(clientmods_folder, clientmod)
+                if not os.path.exists(clientmod_folder):
+                    logging.warning(
+                        f"Clientmod {clientmod} was not found!"
+                        " It must be located at {clientmod_folder}.",
+                    )
+                else:
+                    mods_config.write(f"load_mod_{clientmod} = true\n")
 
     def _reset_zmq(self):
         if self.socket:
@@ -264,7 +284,8 @@ class Minetest(gym.Env):
         # Determine log paths
         reset_timestamp = datetime.datetime.now().strftime("%m-%d-%Y,%H:%M:%S")
         log_path = os.path.join(
-            self.log_dir, f"{{}}_{reset_timestamp}_{self.unique_env_id}.log",
+            self.log_dir,
+            f"{{}}_{reset_timestamp}_{self.unique_env_id}.log",
         )
 
         # (Re)start Minetest server
@@ -296,7 +317,7 @@ class Minetest(gym.Env):
                 shutil.rmtree(self.world_dir)
         else:
             raise RuntimeError(
-                "World directory was not set. Please, provide a world directory"
+                "World directory was not set. Please, provide a world directory "
                 "in the constructor or seed the environment!",
             )
 
@@ -306,7 +327,7 @@ class Minetest(gym.Env):
                 os.remove(self.config_path)
         else:
             raise RuntimeError(
-                "Minetest config path was not set. Please, provide a config path"
+                "Minetest config path was not set. Please, provide a config path "
                 "in the constructor or seed the environment!",
             )
 
@@ -342,7 +363,6 @@ class Minetest(gym.Env):
         if self.config_path is None:
             self.config_path = os.path.join(self.root_dir, f"{self.unique_env_id}.conf")
             self._write_config()
-        # TODO seed used libraries, like numpy, pytorch etc.
 
     def reset(self):
         if self.start_minetest:
@@ -361,7 +381,8 @@ class Minetest(gym.Env):
 
     def step(self, action: Dict[str, Any]):
         # Send action
-        action["MOUSE"] = action["MOUSE"].tolist()
+        if isinstance(action["MOUSE"], np.ndarray):
+            action["MOUSE"] = action["MOUSE"].tolist()
         logging.debug("Sending action: {}".format(action))
         pb_action = pack_pb_action(action)
         self.socket.send(pb_action.SerializeToString())
