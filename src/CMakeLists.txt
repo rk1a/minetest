@@ -36,6 +36,9 @@ set(CMAKE_BUILD_TYPE "${CMAKE_BUILD_TYPE}" CACHE STRING
 # Set some random things default to not being visible in the GUI
 mark_as_advanced(EXECUTABLE_OUTPUT_PATH LIBRARY_OUTPUT_PATH)
 
+if(BUILD_CLIENT AND BUILD_HEADLESS)
+	find_package(SDL2 REQUIRED)
+endif()
 
 if(NOT (BUILD_CLIENT OR BUILD_SERVER))
 	message(WARNING "Neither BUILD_CLIENT nor BUILD_SERVER is set! Setting BUILD_SERVER=true")
@@ -63,7 +66,6 @@ if(NOT USE_CURL)
 		message(WARNING "cURL is required to announce to the server list")
 	endif()
 endif()
-
 
 option(ENABLE_GETTEXT "Use GetText for internationalization" ${BUILD_CLIENT})
 set(USE_GETTEXT FALSE)
@@ -567,6 +569,7 @@ if(BUILD_CLIENT)
 		${PROJECT_NAME}
 		${ZLIB_LIBRARIES}
 		IrrlichtMt::IrrlichtMt
+		$<$<BOOL:BUILD_HEADLESS>:SDL2::SDL2>
 		${ZSTD_LIBRARY}
 		${ZMQ_LIBRARY}
 		${ZMQPP_LIBRARY}
