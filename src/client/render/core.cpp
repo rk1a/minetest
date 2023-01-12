@@ -90,7 +90,8 @@ void RenderingCore::draw(video::SColor _skycolor, bool _show_hud, bool _show_min
     t->unlock();
 
 	raw_image->drop();
-	delete tex, buffer;
+	delete tex;
+	delete buffer;
         #endif
 }
 
