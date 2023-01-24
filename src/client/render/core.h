@@ -43,6 +43,8 @@ protected:
 	v2u32 virtual_size { 0, 0 };
 
 	virtual void createPipeline() {}
+	video::IImage *screenshot = nullptr;
+	bool headless;
 
 public:
 	RenderingCore(IrrlichtDevice *device, Client *client, Hud *hud, 
@@ -58,11 +60,12 @@ public:
 
 	// void savetex(video::ITexture *texture, std::string name, video::IVideoDriver* videoDriver);
 
-	void initialize();
+	void initialize(bool headless);
 	void draw(video::SColor _skycolor, bool _show_hud, bool _show_minimap,
 			bool _draw_wield_tool, bool _draw_crosshair);
 
 	v2u32 getVirtualSize() const;
 
 	ShadowRenderer *get_shadow_renderer() { return shadow_renderer; };
+	video::IImage *get_screenshot();
 };

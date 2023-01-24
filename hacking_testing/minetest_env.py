@@ -14,7 +14,7 @@ import proto_python.objects_pb2 as pb_objects
 import zmq
 from proto_python.objects_pb2 import KeyType
 
-# Define allowed keys / buttons
+# Define default keys / buttons
 KEY_MAP = {
     "FORWARD": KeyType.FORWARD,
     "BACKWARD": KeyType.BACKWARD,
@@ -37,7 +37,6 @@ KEY_MAP = {
     "SLOT_7": KeyType.SLOT_7,
     "SLOT_8": KeyType.SLOT_8,
     "INVENTORY": KeyType.INVENTORY,
-    "ESC": KeyType.ESC,
 }
 INV_KEY_MAP = {value: key for key, value in KEY_MAP.items()}
 
@@ -121,6 +120,7 @@ def start_minetest_client(
     server_port: int = 30000,
     cursor_img: str = "cursors/mouse_cursor_white_16x16.png",
     client_name: str = "MinetestAgent",
+    xvfb_headless: bool = False,
 ):
     cmd = [
         minetest_path,
@@ -141,6 +141,11 @@ def start_minetest_client(
         "--config",
         config_path,
     ]
+    if xvfb_headless:
+        # hide window
+        cmd.insert(0, "xvfb-run")
+        # don't render to screen
+        cmd.append("--headless")
     if cursor_img:
         cmd.extend(["--cursor-image", cursor_img])
 
@@ -168,8 +173,10 @@ class Minetest(gym.Env):
         seed: Optional[int] = None,
         start_minetest: Optional[bool] = True,
         clientmods: List[str] = [],
+        xvfb_headless: bool = False,
     ):
         # Graphics settings
+        self.xvfb_headless = xvfb_headless
         self.display_size = display_size
         self.fov_y = fov
         self.fov_x = self.fov_y * self.display_size[0] / self.display_size[1]
@@ -309,6 +316,7 @@ class Minetest(gym.Env):
             self.env_port,
             self.server_port,
             self.cursor_image_path,
+            xvfb_headless=self.xvfb_headless,
         )
 
     def _delete_world(self):

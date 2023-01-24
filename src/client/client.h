@@ -414,6 +414,7 @@ public:
 	// sends data out
 	float getReward();
 	pb_objects::Image getSendableData(core::position2di cursorPosition, bool isMenuActive, irr::video::IImage* cursorImage);
+	RenderingEngine* getRenderingEngine();
 
 	const Address getServerAddress();
 

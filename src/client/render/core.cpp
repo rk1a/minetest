@@ -37,26 +37,14 @@ RenderingCore::~RenderingCore()
 	delete shadow_renderer;
 }
 
-void RenderingCore::initialize()
+void RenderingCore::initialize(bool headless)
 {
+	this->headless = headless;
 	if (shadow_renderer)
 		pipeline->addStep<RenderShadowMapStep>();
 
 	createPipeline();
 }
-
-/*
-void RenderingCore::savetex(video::ITexture *texture, std::string filename, video::IVideoDriver* videoDriver) {
-    video::IImage* image = videoDriver->createImageFromData(
-        texture->getColorFormat(),
-        texture->getSize(),
-        texture->lock(irr::video::E_TEXTURE_LOCK_MODE::ETLM_READ_WRITE),
-        true  //copy mem
-        );
-    videoDriver->writeImageToFile(image, io::path(filename.c_str()));
-    texture->unlock();
-}
-*/
 
 void RenderingCore::draw(video::SColor _skycolor, bool _show_hud, bool _show_minimap,
 		bool _draw_wield_tool, bool _draw_crosshair)
@@ -70,30 +58,47 @@ void RenderingCore::draw(video::SColor _skycolor, bool _show_hud, bool _show_min
 	context.show_hud = _show_hud;
 	context.show_minimap = _show_minimap;
 
-	/*
-	TextureBuffer *buffer = pipeline->createOwned<TextureBuffer>();
-    buffer->setTexture(0, v2f(1.0f, 1.0f), "idk_lol", video::ECF_A8R8G8B8);
-    auto tex = new TextureBufferOutput(buffer, 0);
-    pipeline->setRenderTarget(tex);
+    if(headless) {
+		TextureBuffer *buffer = pipeline->createOwned<TextureBuffer>();
+		buffer->setTexture(0, v2f(1.0f, 1.0f), "idk_lol", video::ECF_R8G8B8);
+		auto tex = new TextureBufferOutput(buffer, 0);
+		pipeline->setRenderTarget(tex);
 
-	for (auto &step: pipeline->m_pipeline)
-		step->setRenderTarget(tex);
-	*/
 
-	pipeline->reset(context);
-	pipeline->run(context);
+		pipeline->reset(context);
+		pipeline->run(context);
 
- 	auto t = std::time(nullptr);
-    auto tm = *std::localtime(&t);
+		auto t = tex->buffer->getTexture(0);
+		auto raw_image = device->getVideoDriver()->createImageFromData(
+			t->getColorFormat(),
+			device->getVideoDriver()->getScreenSize(),
+			// t->getSize(),
+			t->lock(irr::video::E_TEXTURE_LOCK_MODE::ETLM_READ_ONLY),
+			false  //copy mem
+			);
+		if(screenshot)
+			screenshot->drop();
+		screenshot =
+				device->getVideoDriver()->createImage(video::ECF_R8G8B8,
+				device->getVideoDriver()->getScreenSize()
+				//  raw_image->getDimension()
+				);
+		raw_image->copyTo(screenshot);
+		t->unlock();
 
-	/*
-    std::ostringstream oss;
-    oss << std::put_time(&tm, "%d-%m-%Y %H-%M-%S");
-	auto s = oss.str();
-	const std::string out = s + ".png";
+		raw_image->drop();
+		delete tex;
+	} else {
+		pipeline->reset(context);
+		pipeline->run(context);
+	}
+}
 
-	savetex(tex->buffer->getTexture(0), out, device->getVideoDriver());
-	*/
+video::IImage *RenderingCore::get_screenshot() {
+	if(!screenshot) return nullptr;
+	auto copyScreenshot = device->getVideoDriver()->createImage(video::ECF_R8G8B8, screenshot->getDimension());
+	screenshot->copyTo(copyScreenshot);
+	return copyScreenshot;
 }
 
 v2u32 RenderingCore::getVirtualSize() const

@@ -1824,7 +1824,12 @@ float Client::getCurRate()
 void Client::makeScreenshot()
 {
 	irr::video::IVideoDriver *driver = m_rendering_engine->get_video_driver();
-	irr::video::IImage* const raw_image = driver->createScreenShot();
+	irr::video::IImage* raw_image;
+	if(m_rendering_engine->headless) {
+		raw_image = m_rendering_engine->get_screenshot();
+	} else {
+		raw_image = driver->createScreenShot();
+	}
 
 	if (!raw_image)
 		return;
@@ -1909,7 +1914,12 @@ float Client::getReward() {
 
 pb_objects::Image Client::getSendableData(core::position2di cursorPosition, bool isMenuActive, irr::video::IImage* cursorImage) {
 	irr::video::IVideoDriver *driver = m_rendering_engine->get_video_driver();
-	irr::video::IImage* const raw_image = driver->createScreenShot();
+	irr::video::IImage* raw_image;
+	if(m_rendering_engine->headless) {
+		raw_image = m_rendering_engine->get_screenshot();
+	} else {
+		raw_image = driver->createScreenShot();
+	}
 
 	if (!raw_image)
 		return pb_objects::Image();
@@ -1934,6 +1944,10 @@ pb_objects::Image Client::getSendableData(core::position2di cursorPosition, bool
 	pb_img.set_height(dim.Height);
 	image->drop();
 	return pb_img;
+}
+
+RenderingEngine* Client::getRenderingEngine() {
+	return m_rendering_engine;
 }
 
 bool Client::shouldShowMinimap() const

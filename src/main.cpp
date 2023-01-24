@@ -387,6 +387,9 @@ static void set_allowed_options(OptionList *allowed_options)
 			_("Disallow screen resizing."))));
 	allowed_options->insert(std::make_pair("cursor-image", ValueSpec(VALUETYPE_STRING,
 			_("Path to the cursor image file."))));
+	allowed_options->insert(std::make_pair("headless", ValueSpec(VALUETYPE_FLAG,
+			_("Start client in headless mode."))));
+
 
 
 #endif

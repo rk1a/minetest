@@ -2,9 +2,10 @@
 from minetest_env import Minetest
 
 start_minetest = True
-render = False
+render = True
+headless = True
 seed = 42
-env = Minetest(seed=seed, start_minetest=start_minetest)
+env = Minetest(seed=seed, start_minetest=start_minetest, xvfb_headless=headless)
 obs = env.reset()
 done = False
 while not done:
