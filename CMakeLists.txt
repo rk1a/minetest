@@ -287,8 +287,6 @@ endif()
 # Library pack
 find_package(GMP REQUIRED)
 find_package(Json REQUIRED)
-find_package(Zmq REQUIRED)
-find_package(Zmqpp REQUIRED)
 find_package(Lua REQUIRED)
 find_package(Zmq REQUIRED)
 find_package(Zmqpp REQUIRED)

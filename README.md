@@ -172,6 +172,9 @@ For Alpine users (unsupported):
 
     sudo apk add build-base cmake libpng-dev jpeg-dev libxi-dev mesa-dev sqlite-dev libogg-dev libvorbis-dev openal-soft-dev curl-dev freetype-dev zlib-dev gmp-dev jsoncpp-dev luajit-dev zstd-dev
 
+
+Note that libzmqpp-dev or it's equivalent dependency may be unavailble, in that case libzmqpp needs to be compiled manually by initializing and building the submodule in lib/zmqpp.
+
 #### Download
 
 You can install Git for easily keeping your copy up to date.
