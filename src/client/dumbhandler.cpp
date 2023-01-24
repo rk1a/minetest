@@ -155,12 +155,12 @@ void DumbClientInputHandler::step(float dtime) {
         // keep mouse pos within screen bounds while GUI is open
         if (mousepos[0] < 0) {
             mousepos[0] = 0;
-        } else if(mousepos[0] >= screenDims[0]) {
+        } else if(static_cast<u32>(mousepos[0]) >= screenDims[0]) {
             mousepos[0] = screenDims[0] - 1;
         }
         if (mousepos[1] < 0) {
             mousepos[1] = 0;
-        } else if (mousepos[1] >= screenDims[1]) {
+        } else if (static_cast<u32>(mousepos[1]) >= screenDims[1]) {
             mousepos[1] = screenDims[1] - 1;
         }
 
