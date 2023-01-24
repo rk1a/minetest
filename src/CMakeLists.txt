@@ -206,7 +206,6 @@ endif(ENABLE_REDIS)
 
 
 find_package(SQLite3 REQUIRED)
-find_package(SDL2 REQUIRED)
 
 
 OPTION(ENABLE_PROTOBUF "Enable protocol buffers" TRUE)
