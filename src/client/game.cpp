@@ -1198,7 +1198,7 @@ bool Game::startup(bool *kill,
 		}
 	}
 
-	m_rendering_engine->initialize(client, hud);
+	m_rendering_engine->initialize(client, hud, start_data.isHeadless());
 
 	return true;
 }
@@ -1237,7 +1237,7 @@ void Game::run()
 		// send data out
 		std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
 		if(recorder) {
-			pb_objects::Image pb_img = client->getSendableData(input->getMousePos(), isMenuActive, cursorImage);
+			pb_objects::Image pb_img = client->getSendableData(input->getMousePos(), isMenuActive(), cursorImage);
 			recorder->setImage(pb_img);
 			recorder->sendDataOut(isMenuActive(), cursorImage, client, input);
 		}

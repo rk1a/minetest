@@ -47,6 +47,7 @@ struct GameStartData : GameParams
 	bool isSinglePlayer() const { return address.empty() && !local_server; }
 	bool isDumbClient() const { return dumb && !client_address.empty(); }
 	bool isResizable() const { return resizable; }
+	bool isHeadless() const { return headless; }
 
 	std::string name;
 	std::string password;
@@ -57,6 +58,7 @@ struct GameStartData : GameParams
 	std::string client_address;
 	bool record;
 	bool resizable;
+	bool headless;
 	std::string cursor_image_path;
 
 	ELoginRegister allow_login_or_register = ELoginRegister::Any;

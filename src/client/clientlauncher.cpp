@@ -345,6 +345,9 @@ void ClientLauncher::init_args(GameStartData &start_data, const Settings &cmd_ar
 	
 	start_data.resizable = !cmd_args.getFlag("noresizing");
 
+	// headless mode should only be available for the dumb client
+	start_data.headless = dumb && cmd_args.getFlag("headless");
+
 	if (cmd_args.exists("cursor-image"))
 		start_data.cursor_image_path = cmd_args.get("cursor-image");
 }
