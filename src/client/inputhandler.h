@@ -24,6 +24,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include <list>
 #include "keycode.h"
 #include "renderingengine.h"
+#include "objects.pb.h"
 
 #ifdef HAVE_TOUCHSCREENGUI
 #include "gui/touchscreengui.h"
@@ -202,6 +203,8 @@ public:
 #endif
 
 	bool m_input_blocked = false;
+	KeyList recordKeyIsDown;
+	s32 record_mouse_wheel = 0;
 
 private:
 	s32 mouse_wheel = 0;
@@ -242,6 +245,13 @@ public:
 		return false;
 	}
 
+	virtual bool isDumb() const
+	{
+		return false;
+	}
+
+	virtual pb_objects::Action getLastAction() = 0;
+
 	virtual bool isKeyDown(GameKeyType k) = 0;
 	virtual bool wasKeyDown(GameKeyType k) = 0;
 	virtual bool wasKeyPressed(GameKeyType k) = 0;
@@ -268,6 +278,18 @@ public:
 
 	JoystickController joystick;
 	KeyCache keycache;
+
+	std::unordered_map<pb_objects::KeyType, KeyPress> extraKeys = {
+		{pb_objects::MIDDLE, "KEY_MBUTTON"},
+		{pb_objects::CTRL, "KEY_LCONTROL"}
+	};
+
+	std::vector<pb_objects::KeyType> mouseButtons = {pb_objects::DIG, pb_objects::MIDDLE, pb_objects::PLACE};
+	std::unordered_map<pb_objects::KeyType, KeyPress> mouseButtonMap = {
+		{pb_objects::DIG, "KEY_LBUTTON"},
+		{pb_objects::MIDDLE, "KEY_MBUTTON"},
+		{pb_objects::PLACE, "KEY_RBUTTON"},
+	};
 };
 /*
 	Separated input handler
@@ -284,6 +306,39 @@ public:
 	virtual ~RealInputHandler()
 	{
 		m_receiver->joystick = nullptr;
+	}
+
+	virtual pb_objects::Action getLastAction() {
+		// Calculate mouse speed
+		v2s32 mousespeed = m_mousepos - getMousePos();
+		// Update mouse position
+		// Note: the mouse position is not updated elsewhere
+		// because RealInputHandler does not implement step()
+		m_mousepos = getMousePos();
+
+		pb_objects::Action action;
+		action.set_mousedx(mousespeed[0]);
+		action.set_mousedy(mousespeed[1]);
+
+		for (int i = pb_objects::KeyType::FORWARD; i !=  pb_objects::INTERNAL_ENUM_COUNT; ++i) {
+			pb_objects::KeyboardEvent* ev = action.add_keyevents();
+			pb_objects::KeyType keyType = static_cast<pb_objects::KeyType>(i);
+			ev->set_key(keyType);
+			KeyPress keyPress;
+			if (extraKeys.find(keyType) != extraKeys.end()) {
+				keyPress = extraKeys[keyType];
+			} else {
+				GameKeyType gkey = static_cast<GameKeyType>(i);
+				keyPress = keycache.key[gkey];
+			}
+			bool isDown = m_receiver->recordKeyIsDown[keyPress];
+			if(isDown) {
+				ev->set_eventtype(pb_objects::PRESS);
+			} else {
+				ev->set_eventtype(pb_objects::RELEASE);
+			}
+		}
+		return action;
 	}
 
 	virtual bool isKeyDown(GameKeyType k)
@@ -410,6 +465,32 @@ public:
 	bool isRandom() const
 	{
 		return true;
+	}
+
+	virtual pb_objects::Action getLastAction() {
+		pb_objects::Action action;
+		action.set_mousedx(mousespeed[0]);
+		action.set_mousedy(mousespeed[1]);
+
+		for (int i = pb_objects::KeyType::FORWARD; i !=  pb_objects::INTERNAL_ENUM_COUNT; ++i) {
+			pb_objects::KeyboardEvent* ev = action.add_keyevents();
+			pb_objects::KeyType keyType = static_cast<pb_objects::KeyType>(i);
+			ev->set_key(keyType);
+			KeyPress keyPress;
+			if (extraKeys.find(keyType) != extraKeys.end()) {
+				keyPress = extraKeys[keyType];
+			} else {
+				GameKeyType gkey = static_cast<GameKeyType>(i);
+				keyPress = keycache.key[gkey];
+			}
+			bool isDown = keydown[keyPress];
+			if(isDown) {
+				ev->set_eventtype(pb_objects::PRESS);
+			} else {
+				ev->set_eventtype(pb_objects::RELEASE);
+			}
+		}
+		return action;
 	}
 
 	virtual bool isKeyDown(GameKeyType k) { return keydown[keycache.key[k]]; }

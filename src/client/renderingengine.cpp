@@ -551,11 +551,12 @@ std::vector<irr::video::E_DRIVER_TYPE> RenderingEngine::getSupportedVideoDrivers
 	return drivers;
 }
 
-void RenderingEngine::initialize(Client *client, Hud *hud)
+void RenderingEngine::initialize(Client *client, Hud *hud, bool headless)
 {
+	this->headless = headless;
 	const std::string &draw_mode = g_settings->get("3d_mode");
 	core.reset(createRenderingCore(draw_mode, m_device, client, hud));
-	core->initialize();
+	core->initialize(headless);
 }
 
 void RenderingEngine::finalize()

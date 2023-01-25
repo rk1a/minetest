@@ -20,6 +20,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "pipeline.h"
 #include "client/client.h"
 #include "client/hud.h"
+#include "client/renderingengine.h"
 
 #include <vector>
 #include <memory>
@@ -200,14 +201,13 @@ video::ITexture *DynamicSource::getTexture(u8 index)
 }
 
 void ScreenTarget::activate(PipelineContext &context)
-{
-        #if BUILD_HEADLESS
-        #else
-	auto driver = context.device->getVideoDriver();
-	driver->setRenderTarget(nullptr, m_clear, m_clear, context.clear_color);
-	driver->OnResize(size);
-	RenderTarget::activate(context);
-        #endif
+{	
+	if(!context.client->getRenderingEngine()->headless) {
+		auto driver = context.device->getVideoDriver();
+		driver->setRenderTarget(nullptr, m_clear, m_clear, context.clear_color);
+		driver->OnResize(size);
+		RenderTarget::activate(context);
+	}
 }
 
 void DynamicTarget::activate(PipelineContext &context)

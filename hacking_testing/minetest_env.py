@@ -1,83 +1,112 @@
+import datetime
+import logging
 import os
+import random
+import shutil
 import subprocess
 import uuid
+from typing import Any, Dict, List, Optional, Tuple
 
 import gym
 import matplotlib.pyplot as plt
 import numpy as np
+import proto_python.objects_pb2 as pb_objects
 import zmq
-from gym.spaces import Box, Dict, Discrete
-from proto_python.client import dumb_inputs_pb2 as dumb_inputs
-from proto_python.client import dumb_outputs_pb2 as dumb_outputs
+from proto_python.objects_pb2 import KeyType
 
-# TODO read from the minetest.conf file
-DISPLAY_SIZE = (1024, 600)
-FOV_Y = 72  # degrees
-FOV_X = FOV_Y * DISPLAY_SIZE[0] / DISPLAY_SIZE[1]
-MAX_MOUSE_MOVE_X = 180 / FOV_X * DISPLAY_SIZE[0]
-MAX_MOUSE_MOVE_Y = 180 / FOV_Y * DISPLAY_SIZE[1]
+# Define default keys / buttons
+KEY_MAP = {
+    "FORWARD": KeyType.FORWARD,
+    "BACKWARD": KeyType.BACKWARD,
+    "LEFT": KeyType.LEFT,
+    "RIGHT": KeyType.RIGHT,
+    "JUMP": KeyType.JUMP,
+    "SNEAK": KeyType.SNEAK,  # shift key in menus
+    "DIG": KeyType.DIG,  # left mouse button
+    "MIDDLE": KeyType.MIDDLE,  # middle mouse button
+    "PLACE": KeyType.PLACE,  # right mouse button
+    "DROP": KeyType.DROP,
+    "HOTBAR_NEXT": KeyType.HOTBAR_NEXT,  # mouse wheel up
+    "HOTBAR_PREV": KeyType.HOTBAR_PREV,  # mouse wheel down
+    "SLOT_1": KeyType.SLOT_1,
+    "SLOT_2": KeyType.SLOT_2,
+    "SLOT_3": KeyType.SLOT_3,
+    "SLOT_4": KeyType.SLOT_4,
+    "SLOT_5": KeyType.SLOT_5,
+    "SLOT_6": KeyType.SLOT_6,
+    "SLOT_7": KeyType.SLOT_7,
+    "SLOT_8": KeyType.SLOT_8,
+    "INVENTORY": KeyType.INVENTORY,
+}
+INV_KEY_MAP = {value: key for key, value in KEY_MAP.items()}
 
-KEYS = [
-    "FORWARD",
-    "BACKWARD",
-    "LEFT",
-    "RIGHT",
-    "JUMP",
-    "SNEAK",
-    "DIG",  # left mouse
-    "MIDDLE",  # middle mouse
-    "PLACE",  # right mouse
-    "DROP",
-    "HOTBAR_NEXT",
-    "HOTBAR_PREVIOUS",
-    "SLOT1",
-    "SLOT2",
-    "SLOT3",
-    "SLOT4",
-    "SLOT5",
-    "SLOT6",
-    "SLOT7",
-    "SLOT8",
-    # these keys open the inventory/menu
-    "ESC",
-    "INVENTORY",
-    # "AUX1",
-    # these keys lead to errors:
-    # "CHAT", "CMD",
-    # these keys are probably uninteresting
-    # "zoom",
-    # "autoforward",
-    # "pitchmove",
-    # "freemove",
-    # "fastmove",
-    # "noclip",
-    # "screenshot",
-]
+# Define noop action
+NOOP_ACTION = {key: 0 for key in KEY_MAP.keys()}
+NOOP_ACTION.update({"MOUSE": np.zeros(2, dtype=int)})
+
+
+def unpack_pb_obs(received_obs: str):
+    pb_obs = pb_objects.Observation()
+    pb_obs.ParseFromString(received_obs)
+    obs = np.frombuffer(pb_obs.image.data, dtype=np.uint8).reshape(
+        pb_obs.image.height,
+        pb_obs.image.width,
+        3,
+    )
+    last_action = unpack_pb_action(pb_obs.action) if pb_obs.action else None
+    rew = pb_obs.reward
+    # TODO receive terminal flag and extra infos
+    done = False
+    info = {}
+    return obs, rew, done, info, last_action
+
+
+def unpack_pb_action(pb_action: pb_objects.Action):
+    action = dict(NOOP_ACTION)
+    action["MOUSE"] = [pb_action.mouseDx, pb_action.mouseDy]
+    for key_event in pb_action.keyEvents:
+        if key_event.key in INV_KEY_MAP and key_event.eventType == pb_objects.PRESS:
+            key_name = INV_KEY_MAP[key_event.key]
+            action[key_name] = 1
+    return action
+
+
+def pack_pb_action(action: Dict[str, Any]):
+    pb_action = pb_objects.Action()
+    pb_action.mouseDx, pb_action.mouseDy = action["MOUSE"]
+    for key, v in action.items():
+        if key == "MOUSE":
+            continue
+        pb_action.keyEvents.append(
+            pb_objects.KeyboardEvent(
+                key=KEY_MAP[key],
+                eventType=pb_objects.PRESS if v else pb_objects.RELEASE,
+            ),
+        )
+    return pb_action
 
 
 def start_minetest_server(
     minetest_path: str = "bin/minetest",
     config_path: str = "minetest.conf",
-    log_dir: str = "log",
-    world: str = None,
+    log_path: str = "log/{}.log",
+    server_port: int = 30000,
+    world_dir: str = "newworld",
 ):
-    if world:
-        world_path = world
-    else:
-        world_path = str(uuid.uuid4())
     cmd = [
         minetest_path,
         "--server",
         "--world",
-        world_path,
+        world_dir,
         "--gameid",
-        "minetest",
+        "minetest",  # TODO does this have to be unique?
         "--config",
         config_path,
+        "--port",
+        str(server_port),
     ]
-    os.makedirs(log_dir, exist_ok=True)
-    stdout_file = os.path.join(log_dir, "server_stdout.log")
-    stderr_file = os.path.join(log_dir, "server_stderr.log")
+    stdout_file = log_path.format("server_stdout")
+    stderr_file = log_path.format("server_stderr")
     with open(stdout_file, "w") as out, open(stderr_file, "w") as err:
         server_process = subprocess.Popen(cmd, stdout=out, stderr=err)
     return server_process
@@ -85,10 +114,13 @@ def start_minetest_server(
 
 def start_minetest_client(
     minetest_path: str = "bin/minetest",
-    log_dir: str = "log",
+    config_path: str = "minetest.conf",
+    log_path: str = "log/{}.log",
     client_port: int = 5555,
+    server_port: int = 30000,
     cursor_img: str = "cursors/mouse_cursor_white_16x16.png",
     client_name: str = "MinetestAgent",
+    xvfb_headless: bool = False,
 ):
     cmd = [
         minetest_path,
@@ -99,20 +131,26 @@ def start_minetest_client(
         "--address",
         "0.0.0.0",  # listen to all interfaces
         "--port",
-        "30000",  # TODO this should be the same as in minetest.conf
+        str(server_port),
         "--go",
         "--dumb",
         "--client-address",
         "tcp://localhost:" + str(client_port),
         "--record",
         "--noresizing",
+        "--config",
+        config_path,
     ]
+    if xvfb_headless:
+        # hide window
+        cmd.insert(0, "xvfb-run")
+        # don't render to screen
+        cmd.append("--headless")
     if cursor_img:
         cmd.extend(["--cursor-image", cursor_img])
 
-    os.makedirs(log_dir, exist_ok=True)
-    stdout_file = os.path.join(log_dir, "client_stdout.log")
-    stderr_file = os.path.join(log_dir, "client_stderr.log")
+    stdout_file = log_path.format("client_stdout")
+    stderr_file = log_path.format("client_stderr")
     with open(stdout_file, "w") as out, open(stderr_file, "w") as err:
         client_process = subprocess.Popen(cmd, stdout=out, stderr=err)
     return client_process
@@ -123,106 +161,255 @@ class Minetest(gym.Env):
 
     def __init__(
         self,
-        socket_port: int = 5555,
-        minetest_executable: os.PathLike = None,
-        log_dir: os.PathLike = None,
-        config_path: os.PathLike = None,
+        env_port: int = 5555,
+        server_port: int = 30000,
+        minetest_executable: Optional[os.PathLike] = None,
+        log_dir: Optional[os.PathLike] = None,
+        config_path: Optional[os.PathLike] = None,
+        cursor_image_path: Optional[os.PathLike] = None,
+        world_dir: Optional[os.PathLike] = None,
+        display_size: Tuple[int, int] = (1024, 600),
+        fov: int = 72,
+        seed: Optional[int] = None,
+        start_minetest: Optional[bool] = True,
+        clientmods: List[str] = [],
+        xvfb_headless: bool = False,
     ):
+        # Graphics settings
+        self.xvfb_headless = xvfb_headless
+        self.display_size = display_size
+        self.fov_y = fov
+        self.fov_x = self.fov_y * self.display_size[0] / self.display_size[1]
         # Define action and observation space
-        self.action_space = Dict(
+        self.max_mouse_move_x = self.display_size[0]
+        self.max_mouse_move_y = self.display_size[1]
+        self.action_space = gym.spaces.Dict(
             {
-                **{key.lower(): Discrete(2) for key in KEYS},
+                **{key: gym.spaces.Discrete(2) for key in KEY_MAP.keys()},
                 **{
-                    "mouse": Box(
-                        np.array([-MAX_MOUSE_MOVE_X, -MAX_MOUSE_MOVE_Y]),
-                        np.array([MAX_MOUSE_MOVE_X, MAX_MOUSE_MOVE_Y]),
+                    "MOUSE": gym.spaces.Box(
+                        np.array([-self.max_mouse_move_x, -self.max_mouse_move_y]),
+                        np.array([self.max_mouse_move_x, self.max_mouse_move_y]),
                         shape=(2,),
                         dtype=int,
                     ),
                 },
             },
         )
-        self.observation_space = Box(0, 255, shape=(*DISPLAY_SIZE, 3), dtype=np.uint8)
+        self.observation_space = gym.spaces.Box(
+            0,
+            255,
+            shape=(self.display_size[1], self.display_size[0], 3),
+            dtype=np.uint8,
+        )
 
-        root_dir = os.path.dirname(os.path.dirname(__file__))
+        # Define Minetest paths
+        self.root_dir = os.path.dirname(os.path.dirname(__file__))
+        self.minetest_executable = minetest_executable
         if minetest_executable is None:
-            minetest_executable = os.path.join(root_dir, "bin", "minetest")
+            self.minetest_executable = os.path.join(self.root_dir, "bin", "minetest")
         if log_dir is None:
-            log_dir = os.path.join(root_dir, "log")
-        if config_path is None:
-            config_path = os.path.join(root_dir, "minetest.conf")
+            self.log_dir = os.path.join(self.root_dir, "log")
+        os.makedirs(self.log_dir, exist_ok=True)
+        self.world_dir = world_dir
+        self.config_path = config_path
+        self.cursor_image_path = cursor_image_path
+        if cursor_image_path is None:
+            self.cursor_image_path = os.path.join(
+                self.root_dir,
+                "cursors",
+                "mouse_cursor_white_16x16.png",
+            )
 
-        # TODO we might want to also restart server and/or client when calling reset()
-        # in some situations, e.g. in episodic RL tasks the world should be reset
-        # Start Minetest server and client
-        self.server_process = start_minetest_server(
-            minetest_executable, config_path, log_dir, "newworld",
-        )
-        self.client_process = start_minetest_client(
-            minetest_executable, log_dir, socket_port,
-        )
+        # Regenerate and clean world if no custom world provided
+        self.reset_world = self.world_dir is None
 
-        # Setup ZMQ
-        self.socket_port = socket_port
-        self.context = zmq.Context()
-        self.socket = self.context.socket(zmq.REP)
-        self.socket.bind(f"tcp://*:{self.socket_port}")
+        # Clean config if no custom config provided
+        self.clean_config = self.config_path is None
 
+        # Whether to start minetest server and client
+        self.start_minetest = start_minetest
+
+        # Used ports
+        self.env_port = env_port  # MT env <-> MT client
+        self.server_port = server_port  # MT client <-> MT server
+
+        # ZMQ objects
+        self.socket = None
+        self.context = None
+
+        # Minetest processes
+        self.server_process = None
+        self.client_process = None
+
+        # Env objects
         self.last_obs = None
         self.render_fig = None
         self.render_img = None
 
-    def reset(self):
-        print("Waiting for obs...")
-        byte_obs = self.socket.recv()
-        pb_obs = dumb_outputs.OutputObservation()
-        pb_obs.ParseFromString(byte_obs)
-        obs = np.frombuffer(pb_obs.data, dtype=np.uint8).reshape(
-            pb_obs.height,
-            pb_obs.width,
-            3,
-        )
-        self.last_obs = obs
-        print("Received obs: {}".format(obs.shape))
-        return obs
+        # Seed the environment
+        self.unique_env_id = str(uuid.uuid4())  # fallback UUID when no seed is provided
+        if seed is not None:
+            self.seed(seed)
 
-    def step(self, action):
-        # make mouse action serializable
-        pb_action = dumb_inputs.InputAction()
-        pb_action.mouseDx, pb_action.mouseDy = action["mouse"]
-        for key, v in action.items():
-            if key == "mouse":
-                continue
-            pb_action.keyEvents.append(
-                dumb_inputs.KeyboardEvent(
-                    key=key,
-                    eventType=dumb_inputs.PRESS if v else dumb_inputs.RELEASE,
-                ),
+        # Configure logging
+        logging.basicConfig(
+            filename=os.path.join(self.log_dir, f"env_{self.unique_env_id}.log"),
+            filemode="a",
+            format="%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s",
+            datefmt="%H:%M:%S",
+            level=logging.DEBUG,
+        )
+
+        # Configure mods
+        self.clientmods = clientmods + ["rewards"]  # require the base rewards mod
+        clientmods_folder = os.path.realpath(
+            os.path.join(os.path.dirname(self.minetest_executable), "../clientmods"),
+        )
+        if not os.path.exists(clientmods_folder):
+            raise ValueError(f"Clientmods must be located at {clientmods_folder}!")
+        # Write mods.conf
+        with open(os.path.join(clientmods_folder, "mods.conf"), "w") as mods_config:
+            for clientmod in self.clientmods:
+                clientmod_folder = os.path.join(clientmods_folder, clientmod)
+                if not os.path.exists(clientmod_folder):
+                    logging.warning(
+                        f"Clientmod {clientmod} was not found!"
+                        " It must be located at {clientmod_folder}.",
+                    )
+                else:
+                    mods_config.write(f"load_mod_{clientmod} = true\n")
+
+    def _reset_zmq(self):
+        if self.socket:
+            self.socket.close()
+        self.context = zmq.Context()
+        self.socket = self.context.socket(zmq.REP)
+        self.socket.bind(f"tcp://*:{self.env_port}")
+
+    def _reset_minetest(self):
+        # Determine log paths
+        reset_timestamp = datetime.datetime.now().strftime("%m-%d-%Y,%H:%M:%S")
+        log_path = os.path.join(
+            self.log_dir,
+            f"{{}}_{reset_timestamp}_{self.unique_env_id}.log",
+        )
+
+        # (Re)start Minetest server
+        if self.server_process:
+            self.server_process.kill()
+        self.server_process = start_minetest_server(
+            self.minetest_executable,
+            self.config_path,
+            log_path,
+            self.server_port,
+            self.world_dir,
+        )
+
+        # (Re)start Minetest client
+        if self.client_process:
+            self.client_process.kill()
+        self.client_process = start_minetest_client(
+            self.minetest_executable,
+            self.config_path,
+            log_path,
+            self.env_port,
+            self.server_port,
+            self.cursor_image_path,
+            xvfb_headless=self.xvfb_headless,
+        )
+
+    def _delete_world(self):
+        if self.world_dir is not None:
+            if os.path.exists(self.world_dir):
+                shutil.rmtree(self.world_dir)
+        else:
+            raise RuntimeError(
+                "World directory was not set. Please, provide a world directory "
+                "in the constructor or seed the environment!",
             )
 
-        print("Sending action: {}".format(action))
+    def _delete_config(self):
+        if self.config_path is not None:
+            if os.path.exists(self.config_path):
+                os.remove(self.config_path)
+        else:
+            raise RuntimeError(
+                "Minetest config path was not set. Please, provide a config path "
+                "in the constructor or seed the environment!",
+            )
+
+    def _write_config(self):
+        with open(self.config_path, "w") as config_file:
+            # Update default settings
+            config_file.write("mute_sound = true\n")
+            config_file.write("show_debug = false\n")
+            config_file.write("enable_client_modding = true\n")
+
+            # Set display size
+            config_file.write(f"screen_w = {self.display_size[0]}\n")
+            config_file.write(f"screen_h = {self.display_size[1]}\n")
+
+            # Set FOV
+            config_file.write(f"fov = {self.fov_y}\n")
+
+            # Seed the map generator
+            if self.seed:
+                config_file.write(f"fixed_map_seed = {self.seed}\n")
+
+    def seed(self, seed: int):
+        self.seed = seed
+
+        # Create UUID from seed
+        rnd = random.Random()
+        rnd.seed(self.seed)
+        self.unique_env_id = str(uuid.UUID(int=rnd.getrandbits(128), version=4))
+
+        # If not set manually, world and config paths are based on UUID
+        if self.world_dir is None:
+            self.world_dir = os.path.join(self.root_dir, self.unique_env_id)
+        if self.config_path is None:
+            self.config_path = os.path.join(self.root_dir, f"{self.unique_env_id}.conf")
+            self._write_config()
+
+    def reset(self):
+        if self.start_minetest:
+            if self.reset_world:
+                self._delete_world()
+            self._reset_minetest()
+        self._reset_zmq()
+
+        # Receive initial observation
+        logging.debug("Waiting for first obs...")
+        byte_obs = self.socket.recv()
+        obs, _, _, _, _ = unpack_pb_obs(byte_obs)
+        self.last_obs = obs
+        logging.debug("Received first obs: {}".format(obs.shape))
+        return obs
+
+    def step(self, action: Dict[str, Any]):
+        # Send action
+        if isinstance(action["MOUSE"], np.ndarray):
+            action["MOUSE"] = action["MOUSE"].tolist()
+        logging.debug("Sending action: {}".format(action))
+        pb_action = pack_pb_action(action)
         self.socket.send(pb_action.SerializeToString())
 
         # TODO more robust check for whether a server/client is alive while receiving observations
         for process in [self.server_process, self.client_process]:
-            if process.poll() is not None:
+            if process is not None and process.poll() is not None:
                 return self.last_obs, 0.0, True, {}
 
-        print("Waiting for obs...")
+        # Receive observation
+        logging.debug("Waiting for obs...")
         byte_obs = self.socket.recv()
-        pb_obs = dumb_outputs.OutputObservation()
-        pb_obs.ParseFromString(byte_obs)
-        next_obs = np.frombuffer(pb_obs.data, dtype=np.uint8).reshape(
-            pb_obs.height,
-            pb_obs.width,
-            3,
-        )
+        next_obs, rew, done, info, last_action = unpack_pb_obs(byte_obs)
+
+        if last_action:
+            assert action == last_action
+
         self.last_obs = next_obs
-        print("Received obs: {}".format(next_obs.shape))
-        # TODO receive rewards etc.
-        rew = 0.0
-        done = False
-        info = {}
+        logging.debug(f"Received obs - {next_obs.shape}; reward - {rew}")
         return next_obs, rew, done, info
 
     def render(self, render_mode: str = "human"):
@@ -240,12 +427,10 @@ class Minetest(gym.Env):
                 plt.rcParams["figure.autolayout"] = True
 
                 self.render_fig = plt.figure(
-                    num="Minetest",
-                    figsize=(3 * DISPLAY_SIZE[0] / DISPLAY_SIZE[1], 3),
+                    num="Minetest Env",
+                    figsize=(3 * self.display_size[0] / self.display_size[1], 3),
                 )
-                self.render_img = self.render_fig.gca().imshow(
-                    self.last_obs,
-                )
+                self.render_img = self.render_fig.gca().imshow(self.last_obs)
                 self.render_fig.gca().axis("off")
                 self.render_fig.gca().margins(0, 0)
                 self.render_fig.gca().autoscale_view()
@@ -258,6 +443,13 @@ class Minetest(gym.Env):
     def close(self):
         if self.render_fig is not None:
             plt.close()
-        self.socket.close()
-        self.client_process.kill()
-        self.server_process.kill()
+        if self.socket is not None:
+            self.socket.close()
+        if self.client_process is not None:
+            self.client_process.kill()
+        if self.server_process is not None:
+            self.server_process.kill()
+        if self.reset_world:
+            self._delete_world()
+        if self.clean_config:
+            self._delete_config()
