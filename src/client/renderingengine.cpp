@@ -35,7 +35,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "inputhandler.h"
 #include "gettext.h"
 #include "../gui/guiSkin.h"
-#ifdef BUILD_HEADLESS
+#if BUILD_HEADLESS
 	#include <SDL_video.h>
 #endif
 
@@ -144,9 +144,9 @@ RenderingEngine::RenderingEngine(IEventReceiver *receiver)
 	params.OGLES2ShaderPath = (porting::path_share + DIR_DELIM + rel_path + DIR_DELIM).c_str();
 #endif
 
-        #if BUILD_HEADLESS
+#if BUILD_HEADLESS
 	SDL_VideoInit("offscreen");
-        #endif
+#endif
 
 	m_device = createDeviceEx(params);
 	driver = m_device->getVideoDriver();

@@ -572,11 +572,15 @@ endif()
 if(BUILD_CLIENT)
 	add_executable(${PROJECT_NAME} ${client_SRCS} ${extra_windows_SRCS})
 	add_dependencies(${PROJECT_NAME} GenerateVersion)
+
+	if(BUILD_HEADLESS)
+		set(SDL2_TARGET SDL2::SDL2)
+	endif()
 	target_link_libraries(
 		${PROJECT_NAME}
 		${ZLIB_LIBRARIES}
 		IrrlichtMt::IrrlichtMt
-		$<$<BOOL:BUILD_HEADLESS>:SDL2::SDL2>
+		${SDL2_TARGET}
 		${ZSTD_LIBRARY}
 		${ZMQ_LIBRARY}
 		${ZMQPP_LIBRARY}
