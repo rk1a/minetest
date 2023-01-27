@@ -37,8 +37,9 @@ RenderingCore::~RenderingCore()
 	delete shadow_renderer;
 }
 
-void RenderingCore::initialize()
+void RenderingCore::initialize(bool headless)
 {
+	this->headless = headless;
 	if (shadow_renderer)
 		pipeline->addStep<RenderShadowMapStep>();
 
@@ -57,41 +58,38 @@ void RenderingCore::draw(video::SColor _skycolor, bool _show_hud, bool _show_min
 	context.show_hud = _show_hud;
 	context.show_minimap = _show_minimap;
 
-        #if BUILD_HEADLESS
-	TextureBuffer *buffer = pipeline->createOwned<TextureBuffer>();
-    buffer->setTexture(0, v2f(1.0f, 1.0f), "idk_lol", video::ECF_R8G8B8);
-    auto tex = new TextureBufferOutput(buffer, 0);
-    pipeline->setRenderTarget(tex);
-        #endif
+    if(headless) {
+		TextureBuffer *buffer = pipeline->createOwned<TextureBuffer>();
+		buffer->setTexture(0, v2f(1.0f, 1.0f), "idk_lol", video::ECF_R8G8B8);
+		auto tex = new TextureBufferOutput(buffer, 0);
+		pipeline->setRenderTarget(tex);
+		pipeline->reset(context);
+		pipeline->run(context);
 
-	// for (auto &step: pipeline->m_pipeline)
-	// 	step->setRenderTarget(tex);
+		auto t = tex->buffer->getTexture(0);
+		auto raw_image = device->getVideoDriver()->createImageFromData(
+			t->getColorFormat(),
+			device->getVideoDriver()->getScreenSize(),
+			// t->getSize(),
+			t->lock(irr::video::E_TEXTURE_LOCK_MODE::ETLM_READ_ONLY),
+			false  //copy mem
+			);
+		if(screenshot)
+			screenshot->drop();
+		screenshot =
+				device->getVideoDriver()->createImage(video::ECF_R8G8B8,
+				device->getVideoDriver()->getScreenSize()
+				//  raw_image->getDimension()
+				);
+		raw_image->copyTo(screenshot);
+		t->unlock();
 
-	pipeline->reset(context);
-	pipeline->run(context);
-
-        #if BUILD_HEADLESS
-	auto t = tex->buffer->getTexture(0);
-    auto raw_image = device->getVideoDriver()->createImageFromData(
-        t->getColorFormat(),
-		device->getVideoDriver()->getScreenSize(),
-        // t->getSize(),
-        t->lock(irr::video::E_TEXTURE_LOCK_MODE::ETLM_READ_ONLY),
-        false  //copy mem
-        );
-	if(screenshot)
-		screenshot->drop();
-	screenshot =
-			 device->getVideoDriver()->createImage(video::ECF_R8G8B8,
-			 device->getVideoDriver()->getScreenSize()
-			//  raw_image->getDimension()
-			 );
-	raw_image->copyTo(screenshot);
-    t->unlock();
-
-	raw_image->drop();
-	delete tex;
-        #endif
+		raw_image->drop();
+		delete tex;
+	} else {
+		pipeline->reset(context);
+		pipeline->run(context);
+	}
 }
 
 video::IImage *RenderingCore::get_screenshot() {

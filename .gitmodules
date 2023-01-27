@@ -1,4 +1,8 @@
 [submodule "lib/irrlichtmt"]
 	path = lib/irrlichtmt
-	url = https://github.com/eleutherai/irrlicht
+	url = git@github.com:EleutherAI/irrlicht.git 
         branch = headless-rendering
+
+[submodule "lib/zmqpp"]
+	path = lib/zmqpp
+	url = git@github.com:zeromq/zmqpp.git

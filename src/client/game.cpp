@@ -900,7 +900,7 @@ private:
 
 	// ZMQ objects
 	zmqpp::context context;
-	zmqpp::socket zmqclient;
+	zmqpp::socket* zmqclient;
 
 	// cursor image used in Gui recording
 	irr::video::IImage* cursorImage;
@@ -1008,8 +1008,7 @@ private:
 
 Game::Game() :
 	m_chat_log_buf(g_logger),
-	m_game_ui(new GameUI()),
-	zmqclient(context, zmqpp::socket_type::request)
+	m_game_ui(new GameUI())
 {
 	g_settings->registerChangedCallback("doubletap_jump",
 		&settingChangedCallback, this);
@@ -1060,6 +1059,10 @@ Game::~Game()
 		delete sound;
 	if(recorder)
 		delete recorder;
+	if(zmqclient) {
+		zmqclient->close();
+		delete zmqclient;
+	}
 
 	delete server; // deleted first to stop all server threads
 
@@ -1149,32 +1152,53 @@ bool Game::startup(bool *kill,
 		return false;
 
 	// create ZMQ objects
-	errorstream << start_data.isDumbClient() << " " << start_data.isRecording();
-	if(start_data.isDumbClient() || start_data.isRecording()) {
-		std::string address = start_data.client_address;
-		std::cout << "Try to connect to: " << address << std::endl;
-		try {
-			zmqclient.connect(address);
-		} catch (zmqpp::zmq_internal_exception &e) {
-			errorstream << "ZeroMQ error: " << e.what() << " (port: " << start_data.client_address << ")\n";
-			throw e;
-		};
-		// setup socket for dumb handler and recorder
+	if(start_data.isDumbClient() || start_data.record) {
+		zmqpp::socket_type socket_type;
 		if (start_data.isDumbClient()) {
-			dynamic_cast<DumbClientInputHandler*>(input)->socket = &zmqclient;
+			// the dumb client is communicating via REP/REQ pattern
+			// with the python client; requests are observations
+			// replys are actions
+			socket_type = zmqpp::socket_type::request;
+			zmqclient = new zmqpp::socket(context, socket_type);
+			std::string address = start_data.client_address;
+			std::cout << "Try to connect to: " << address << std::endl;
+			try {
+				zmqclient->connect(address);
+			} catch (zmqpp::zmq_internal_exception &e) {
+				errorstream << "ZeroMQ error: " << e.what() << " (port: " << start_data.client_address << ")\n";
+				throw e;
+			};
+		} else {
+			// if we are just recording, we use PUB/SUB pattern
+			socket_type = zmqpp::socket_type::publish;
+			zmqclient = new zmqpp::socket(context, socket_type);
+			std::string address = start_data.client_address;
+			std::cout << "Try to bind to: " << address << std::endl;
+			try {
+				zmqclient->bind(address);
+			} catch (zmqpp::zmq_internal_exception &e) {
+				errorstream << "ZeroMQ error: " << e.what() << " (port: " << start_data.client_address << ")\n";
+				throw e;
+			};
+		}
+		
+		// pass socket to dumb handler and recorder
+		if (start_data.isDumbClient()) {
+			dynamic_cast<DumbClientInputHandler*>(input)->socket = zmqclient;
 		}
 		if (start_data.isRecording())  {
 			createRecorder(start_data);
-			recorder->sender = &zmqclient;
+			recorder->sender = zmqclient;
+		}
+
+		// setup provided cursor image
+		if (start_data.cursor_image_path != "") {
+			core::string<fschar_t> cursorPath = start_data.cursor_image_path.c_str();
+			cursorImage = driver->createImageFromFile(cursorPath);
 		}
 	}
-	// setup provided cursor image
-	if (start_data.cursor_image_path != "") {
-		core::string<fschar_t> cursorPath = start_data.cursor_image_path.c_str();
-		cursorImage = driver->createImageFromFile(cursorPath);
-	}
 
-	m_rendering_engine->initialize(client, hud);
+	m_rendering_engine->initialize(client, hud, start_data.isHeadless());
 
 	return true;
 }
@@ -1212,8 +1236,11 @@ void Game::run()
 
 		// send data out
 		std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
-		if(recorder)
+		if(recorder) {
+			pb_objects::Image pb_img = client->getSendableData(input->getMousePos(), isMenuActive(), cursorImage);
+			recorder->setImage(pb_img);
 			recorder->sendDataOut(isMenuActive(), cursorImage, client, input);
+		}
 		std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
 		warningstream << "Time difference = " << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() << "[µs]" << std::endl;
 
@@ -1559,7 +1586,7 @@ bool Game::createClient(const GameStartData &start_data)
 
 
 void Game::createRecorder(const GameStartData &start_data) {
-	recorder = new Recorder(start_data.client_address);
+	recorder = new Recorder();
 }
 
 bool Game::initGui()
@@ -2010,6 +2037,13 @@ void Game::processUserInput(f32 dtime)
 
 	// Input handler step() (used by the random input generator)
 	input->step(dtime);
+
+	if(recorder) {
+		// need to get input state before key input is processed
+		// because calls to wasKeyDown reset the isKeyDown state
+		pb_objects::Action inputState = input->getLastAction();
+		recorder->setAction(inputState);
+	}
 
 #ifdef __ANDROID__
 	auto formspec = m_game_ui->getFormspecGUI();
@@ -2560,7 +2594,7 @@ void Game::checkZoomEnabled()
 void Game::updateCameraDirection(CameraOrientation *cam, float dtime)
 {
 	if ((device->isWindowActive() && device->isWindowFocused()
-			&& !isMenuActive()) || input->isRandom()) {
+			&& !isMenuActive()) || input->isRandom() || (input->isDumb() && !isMenuActive())) {
 
 #ifndef __ANDROID__
 		if (!input->isRandom()) {

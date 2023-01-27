@@ -37,7 +37,7 @@ set(CMAKE_BUILD_TYPE "${CMAKE_BUILD_TYPE}" CACHE STRING
 mark_as_advanced(EXECUTABLE_OUTPUT_PATH LIBRARY_OUTPUT_PATH)
 
 if(BUILD_CLIENT AND BUILD_HEADLESS)
-	find_package(SDL2 REQUIRED)
+	find_package(SDL2 REQUIRED NO_DEFAULT_PATH)
 	# SDL2 exports targets since 2.0.6, but some distributions override config.
 	if(NOT TARGET SDL2::SDL2)
 		add_library(SDL2::SDL2 INTERFACE IMPORTED)
@@ -217,7 +217,7 @@ if(ENABLE_PROTOBUF)
 	find_package(Protobuf REQUIRED) 
 	include_directories(${Protobuf_INCLUDE_DIRS})
 	get_filename_component(PROTO_PARENT ${PROJECT_SOURCE_DIR}/.. ABSOLUTE)
-	file(GLOB PROTO_FILES ${PROTO_PARENT}/proto/**/*.proto)
+	file(GLOB PROTO_FILES ${PROTO_PARENT}/proto/*.proto)
 	foreach(file ${PROTO_FILES})
 		get_filename_component(basename ${file} NAME_WLE)
 		get_filename_component(directory ${file} DIRECTORY)
@@ -572,11 +572,15 @@ endif()
 if(BUILD_CLIENT)
 	add_executable(${PROJECT_NAME} ${client_SRCS} ${extra_windows_SRCS})
 	add_dependencies(${PROJECT_NAME} GenerateVersion)
+
+	if(BUILD_HEADLESS)
+		set(SDL2_TARGET SDL2::SDL2)
+	endif()
 	target_link_libraries(
 		${PROJECT_NAME}
 		${ZLIB_LIBRARIES}
 		IrrlichtMt::IrrlichtMt
-		$<$<BOOL:BUILD_HEADLESS>:SDL2::SDL2>
+		${SDL2_TARGET}
 		${ZSTD_LIBRARY}
 		${ZMQ_LIBRARY}
 		${ZMQPP_LIBRARY}

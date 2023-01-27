@@ -115,7 +115,7 @@ public:
 	void draw_scene(video::SColor skycolor, bool show_hud,
 			bool show_minimap, bool draw_wield_tool, bool draw_crosshair);
 
-	void initialize(Client *client, Hud *hud);
+	void initialize(Client *client, Hud *hud, bool headless);
 	void finalize();
 
 	bool run()
@@ -132,6 +132,7 @@ public:
 	}
 	static std::vector<irr::video::E_DRIVER_TYPE> getSupportedVideoDrivers();
 	irr::video::IImage *get_screenshot();
+	bool headless;
 
 private:
 	v2u32 _getWindowSize() const;

@@ -41,7 +41,7 @@ message(STATUS "*** Will build version ${VERSION_STRING} ***")
 
 
 # Configuration options
-set(DEFAULT_RUN_IN_PLACE FALSE)
+set(DEFAULT_RUN_IN_PLACE TRUE)
 if(WIN32)
 	set(DEFAULT_RUN_IN_PLACE TRUE)
 endif()
@@ -289,8 +289,6 @@ endif()
 # Library pack
 find_package(GMP REQUIRED)
 find_package(Json REQUIRED)
-find_package(Zmq REQUIRED)
-find_package(Zmqpp REQUIRED)
 find_package(Lua REQUIRED)
 find_package(Zmq REQUIRED)
 find_package(Zmqpp REQUIRED)
