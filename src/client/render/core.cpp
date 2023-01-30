@@ -23,6 +23,8 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "client/shadows/dynamicshadowsrender.h"
 #include "settings.h"
 #include <iostream>
+#include "client/renderingengine.h"
+#include "client/client.h"
 
 RenderingCore::RenderingCore(IrrlichtDevice *_device, Client *_client, Hud *_hud, 
 		ShadowRenderer *_shadow_renderer, RenderPipeline *_pipeline, v2f _virtual_size_scale)
@@ -37,9 +39,8 @@ RenderingCore::~RenderingCore()
 	delete shadow_renderer;
 }
 
-void RenderingCore::initialize(bool headless)
+void RenderingCore::initialize()
 {
-	this->headless = headless;
 	if (shadow_renderer)
 		pipeline->addStep<RenderShadowMapStep>();
 
@@ -58,7 +59,7 @@ void RenderingCore::draw(video::SColor _skycolor, bool _show_hud, bool _show_min
 	context.show_hud = _show_hud;
 	context.show_minimap = _show_minimap;
 
-    if(headless) {
+    if(client->getRenderingEngine()->headless) {
 		TextureBuffer *buffer = pipeline->createOwned<TextureBuffer>();
 		buffer->setTexture(0, v2f(1.0f, 1.0f), "idk_lol", video::ECF_R8G8B8);
 		auto tex = new TextureBufferOutput(buffer, 0);
