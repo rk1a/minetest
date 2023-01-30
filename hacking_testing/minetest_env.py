@@ -5,12 +5,14 @@ import random
 import shutil
 import subprocess
 import uuid
+from distutils.dir_util import copy_tree
 from typing import Any, Dict, List, Optional, Tuple
 
 import gym
 import matplotlib.pyplot as plt
 import numpy as np
 import proto_python.objects_pb2 as pb_objects
+import psutil
 import zmq
 from proto_python.objects_pb2 import KeyType
 
@@ -55,8 +57,8 @@ def unpack_pb_obs(received_obs: str):
     )
     last_action = unpack_pb_action(pb_obs.action) if pb_obs.action else None
     rew = pb_obs.reward
-    # TODO receive terminal flag and extra infos
-    done = False
+    done = pb_obs.terminal
+    # TODO receive extra infos
     info = {}
     return obs, rew, done, info, last_action
 
@@ -143,6 +145,7 @@ def start_minetest_client(
     ]
     if xvfb_headless:
         # hide window
+        cmd.insert(0, "-a")  # allow restarts
         cmd.insert(0, "xvfb-run")
         # don't render to screen
         cmd.append("--headless")
@@ -171,8 +174,10 @@ class Minetest(gym.Env):
         display_size: Tuple[int, int] = (1024, 600),
         fov: int = 72,
         seed: Optional[int] = None,
-        start_minetest: Optional[bool] = True,
+        start_minetest: bool = True,
         clientmods: List[str] = [],
+        servermods: List[str] = [],
+        config_dict: Dict[str, Any] = {},
         xvfb_headless: bool = False,
     ):
         # Graphics settings
@@ -263,22 +268,53 @@ class Minetest(gym.Env):
 
         # Configure mods
         self.clientmods = clientmods + ["rewards"]  # require the base rewards mod
+        # add client mod names in case they entail a server side component
+        self.servermods = servermods + clientmods
+        self._enable_clientmods()
+
+        # Write minetest.conf
+        self.config_dict = config_dict
+        self._write_config()
+
+    def _enable_clientmods(self):
         clientmods_folder = os.path.realpath(
             os.path.join(os.path.dirname(self.minetest_executable), "../clientmods"),
         )
         if not os.path.exists(clientmods_folder):
-            raise ValueError(f"Clientmods must be located at {clientmods_folder}!")
-        # Write mods.conf
+            raise ValueError(f"Client mods must be located at {clientmods_folder}!")
+        # Write mods.conf to enable client mods
         with open(os.path.join(clientmods_folder, "mods.conf"), "w") as mods_config:
             for clientmod in self.clientmods:
                 clientmod_folder = os.path.join(clientmods_folder, clientmod)
                 if not os.path.exists(clientmod_folder):
                     logging.warning(
-                        f"Clientmod {clientmod} was not found!"
+                        f"Client mod {clientmod} was not found!"
                         " It must be located at {clientmod_folder}.",
                     )
                 else:
                     mods_config.write(f"load_mod_{clientmod} = true\n")
+
+    def _enable_servermods(self):
+        # Check if there are any server mods
+        servermods_folder = os.path.realpath(
+            os.path.join(os.path.dirname(self.minetest_executable), "../mods"),
+        )
+        if not os.path.exists(servermods_folder):
+            raise ValueError(f"Server mods must be located at {servermods_folder}!")
+        # Create world_dir/worldmods folder
+        worldmods_folder = os.path.join(self.world_dir, "worldmods")
+        os.makedirs(worldmods_folder, exist_ok=True)
+        # Copy server mods to world_dir/worldmods
+        for mod in self.servermods:
+            mod_folder = os.path.join(servermods_folder, mod)
+            world_mod_folder = os.path.join(worldmods_folder, mod)
+            if not os.path.exists(mod_folder):
+                logging.warning(
+                    f"Server mod {mod} was not found!"
+                    f" It must be located at {mod_folder}.",
+                )
+            else:
+                shutil.copytree(mod_folder, world_mod_folder)
 
     def _reset_zmq(self):
         if self.socket:
@@ -298,6 +334,8 @@ class Minetest(gym.Env):
         # (Re)start Minetest server
         if self.server_process:
             self.server_process.kill()
+        self._enable_servermods()
+
         self.server_process = start_minetest_server(
             self.minetest_executable,
             self.config_path,
@@ -309,6 +347,11 @@ class Minetest(gym.Env):
         # (Re)start Minetest client
         if self.client_process:
             self.client_process.kill()
+            if self.xvfb_headless:
+                # kill running xvfb processes
+                for proc in psutil.process_iter():
+                    if proc.name() in ["Xvfb"]:
+                        proc.kill()
         self.client_process = start_minetest_client(
             self.minetest_executable,
             self.config_path,
@@ -345,6 +388,8 @@ class Minetest(gym.Env):
             config_file.write("mute_sound = true\n")
             config_file.write("show_debug = false\n")
             config_file.write("enable_client_modding = true\n")
+            config_file.write("csm_restriction_flags = 0\n")
+            config_file.write("enable_mod_channels = true\n")
 
             # Set display size
             config_file.write(f"screen_w = {self.display_size[0]}\n")
@@ -356,6 +401,10 @@ class Minetest(gym.Env):
             # Seed the map generator
             if self.seed:
                 config_file.write(f"fixed_map_seed = {self.seed}\n")
+
+            # Set from custom config dict
+            for key, value in self.config_dict.items():
+                config_file.write(f"{key} = {value}\n")
 
     def seed(self, seed: int):
         self.seed = seed
@@ -370,7 +419,6 @@ class Minetest(gym.Env):
             self.world_dir = os.path.join(self.root_dir, self.unique_env_id)
         if self.config_path is None:
             self.config_path = os.path.join(self.root_dir, f"{self.unique_env_id}.conf")
-            self._write_config()
 
     def reset(self):
         if self.start_minetest:
@@ -445,10 +493,17 @@ class Minetest(gym.Env):
             plt.close()
         if self.socket is not None:
             self.socket.close()
+        # TODO improve process termination
+        # i.e. don't kill, but close signal
         if self.client_process is not None:
             self.client_process.kill()
         if self.server_process is not None:
             self.server_process.kill()
+        if self.xvfb_headless:
+            # kill remaining xvfb and minetest processes
+            for proc in psutil.process_iter():
+                if proc.name() in ["Xvfb", "minetest"]:
+                    proc.kill()
         if self.reset_world:
             self._delete_world()
         if self.clean_config:
