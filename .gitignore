@@ -65,12 +65,14 @@ newworld/
 /mods/minetest/*
 !/mods/minetest/mods_here.txt
 !/mods/mods_here.txt
+!/mods/random_v*/
+!/mods/treechop_v*/
 /worlds
 /world/
 /clientmods/*
 !/clientmods/rewards/
-!/clientmods/random/
-!/clientmods/treechop/
+!/clientmods/random_v*/
+!/clientmods/treechop_v*/
 !/clientmods/mods.conf
 /client/mod_storage/
 

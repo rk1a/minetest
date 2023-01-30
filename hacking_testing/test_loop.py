@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
 from minetest_env import Minetest
 
-start_minetest = True
-render = True
-headless = True
-seed = 42
-env = Minetest(seed=seed, start_minetest=start_minetest, xvfb_headless=headless)
+env = Minetest(
+    seed=42,
+    start_minetest=True,
+    xvfb_headless=True,
+    clientmods=["random_v0"],
+)
+
+render = False
 obs = env.reset()
 done = False
 while not done:
