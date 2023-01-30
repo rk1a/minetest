@@ -413,6 +413,7 @@ public:
 
 	// sends data out
 	float getReward();
+	bool getTerminal();
 	pb_objects::Image getSendableData(core::position2di cursorPosition, bool isMenuActive, irr::video::IImage* cursorImage);
 	RenderingEngine* getRenderingEngine();
 

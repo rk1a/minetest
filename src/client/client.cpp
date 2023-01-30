@@ -1902,7 +1902,7 @@ float Client::getReward() {
 		ClientScripting *scr = getScript();
 		if(scr) {
 			lua_State *L = scr->getStack();
-			lua_getglobal(L, "reward");
+			lua_getglobal(L, "REWARD");
 			reward = (float)lua_tonumber(L, lua_gettop(L));
 			lua_pop(L, 1);
 		}
@@ -1910,6 +1910,22 @@ float Client::getReward() {
 		warningstream << "No reward mod active!" << std::endl;
 	}
     return reward;
+}
+
+bool Client::getTerminal() {
+	bool terminal = false;
+	try {
+		ClientScripting *scr = getScript();
+		if(scr) {
+			lua_State *L = scr->getStack();
+			lua_getglobal(L, "TERMINAL");
+			terminal = (bool)lua_toboolean(L, lua_gettop(L));
+			lua_pop(L, 1);
+		}
+	} catch(...) { // TODO improve error handling
+		warningstream << "No reward mod active!" << std::endl;
+	}
+    return terminal;
 }
 
 pb_objects::Image Client::getSendableData(core::position2di cursorPosition, bool isMenuActive, irr::video::IImage* cursorImage) {
