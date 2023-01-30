@@ -5,7 +5,6 @@ import random
 import shutil
 import subprocess
 import uuid
-from distutils.dir_util import copy_tree
 from typing import Any, Dict, List, Optional, Tuple
 
 import gym
