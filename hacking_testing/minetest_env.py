@@ -345,6 +345,7 @@ class Minetest(gym.Env):
             config_file.write("mute_sound = true\n")
             config_file.write("show_debug = false\n")
             config_file.write("enable_client_modding = true\n")
+            config_file.write("video_driver = null\n")
 
             # Set display size
             config_file.write(f"screen_w = {self.display_size[0]}\n")
