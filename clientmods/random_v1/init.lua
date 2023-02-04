@@ -6,7 +6,6 @@ minetest.register_on_modchannel_message(function(channel_name, sender, message)
         local split_message = string.gmatch(message, "%S+")
         local reward = tonumber(split_message())
         local terminal = split_message()
-        minetest.debug("Receiving random stuff: " .. reward ..  " " .. terminal)
         REWARD = reward
         TERMINAL = terminal  == "1"
     end
