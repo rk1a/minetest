@@ -270,6 +270,7 @@ class Minetest(gym.Env):
         # add client mod names in case they entail a server side component
         self.servermods = servermods + clientmods
         self._enable_clientmods()
+        self._enable_servermods()
 
         # Write minetest.conf
         self.config_dict = config_dict
@@ -280,7 +281,7 @@ class Minetest(gym.Env):
             os.path.join(os.path.dirname(self.minetest_executable), "../clientmods"),
         )
         if not os.path.exists(clientmods_folder):
-            raise ValueError(f"Client mods must be located at {clientmods_folder}!")
+            raise RuntimeError(f"Client mods must be located at {clientmods_folder}!")
         # Write mods.conf to enable client mods
         with open(os.path.join(clientmods_folder, "mods.conf"), "w") as mods_config:
             for clientmod in self.clientmods:
@@ -299,8 +300,9 @@ class Minetest(gym.Env):
             os.path.join(os.path.dirname(self.minetest_executable), "../mods"),
         )
         if not os.path.exists(servermods_folder):
-            raise ValueError(f"Server mods must be located at {servermods_folder}!")
+            raise RuntimeError(f"Server mods must be located at {servermods_folder}!")
         # Create world_dir/worldmods folder
+        self._check_world_dir()
         worldmods_folder = os.path.join(self.world_dir, "worldmods")
         os.makedirs(worldmods_folder, exist_ok=True)
         # Copy server mods to world_dir/worldmods
@@ -333,7 +335,6 @@ class Minetest(gym.Env):
         # (Re)start Minetest server
         if self.server_process:
             self.server_process.kill()
-        self._enable_servermods()
 
         self.server_process = start_minetest_server(
             self.minetest_executable,
@@ -360,26 +361,30 @@ class Minetest(gym.Env):
             self.cursor_image_path,
             xvfb_headless=self.xvfb_headless,
         )
-
-    def _delete_world(self):
-        if self.world_dir is not None:
-            if os.path.exists(self.world_dir):
-                shutil.rmtree(self.world_dir)
-        else:
+    
+    def _check_world_dir(self):
+        if self.world_dir is None:
             raise RuntimeError(
                 "World directory was not set. Please, provide a world directory "
                 "in the constructor or seed the environment!",
             )
 
-    def _delete_config(self):
-        if self.config_path is not None:
-            if os.path.exists(self.config_path):
-                os.remove(self.config_path)
-        else:
+    def _delete_world(self):
+        self._check_world_dir()
+        if os.path.exists(self.world_dir):
+            shutil.rmtree(self.world_dir)
+    
+    def _check_config_path(self):
+        if self.config_path is None:
             raise RuntimeError(
                 "Minetest config path was not set. Please, provide a config path "
                 "in the constructor or seed the environment!",
             )
+
+    def _delete_config(self):
+        self._check_config_path()
+        if os.path.exists(self.config_path):
+            os.remove(self.config_path)
 
     def _write_config(self):
         with open(self.config_path, "w") as config_file:
@@ -423,6 +428,7 @@ class Minetest(gym.Env):
         if self.start_minetest:
             if self.reset_world:
                 self._delete_world()
+            self._enable_servermods()
             self._reset_minetest()
         self._reset_zmq()
 
