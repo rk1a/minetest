@@ -73,7 +73,6 @@ newworld/
 !/clientmods/rewards/
 !/clientmods/random_v*/
 !/clientmods/treechop_v*/
-!/clientmods/mods.conf
 /client/mod_storage/
 
 ## Configuration/log files
@@ -97,6 +96,7 @@ doc/mkdocs/mkdocs.yml
 
 ## Build files
 build/
+build_headless/
 CMakeFiles
 Makefile
 cmake_install.cmake
