@@ -65,13 +65,14 @@ newworld/
 /mods/minetest/*
 !/mods/minetest/mods_here.txt
 !/mods/mods_here.txt
+!/mods/random_v*/
+!/mods/treechop_v*/
 /worlds
 /world/
 /clientmods/*
 !/clientmods/rewards/
-!/clientmods/random/
-!/clientmods/treechop/
-!/clientmods/mods.conf
+!/clientmods/random_v*/
+!/clientmods/treechop_v*/
 /client/mod_storage/
 
 ## Configuration/log files
@@ -95,6 +96,7 @@ doc/mkdocs/mkdocs.yml
 
 ## Build files
 build/
+build_headless/
 CMakeFiles
 Makefile
 cmake_install.cmake

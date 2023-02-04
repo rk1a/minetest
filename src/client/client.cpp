@@ -1902,14 +1902,46 @@ float Client::getReward() {
 		ClientScripting *scr = getScript();
 		if(scr) {
 			lua_State *L = scr->getStack();
-			lua_getglobal(L, "reward");
+			// read out global REWARD variable
+			lua_getglobal(L, "REWARD"); // push global REWARD value to stack
+			// check if it can be converted to a number
+			if (!lua_isnumber(L, lua_gettop(L)))
+        		errorstream << "`REWARD' should be a number!" << std::endl;
+			// convert to number
 			reward = (float)lua_tonumber(L, lua_gettop(L));
-			lua_pop(L, 1);
+			lua_pop(L, 1); // remove REWARD value from stack
+			// reset global REWARD to zero
+			lua_pushnumber(L, 0.); // push zero to the stack
+			lua_setglobal(L, "REWARD"); // pop zero and assign to REWARD
 		}
-	} catch(...) { // TODO improve error handling
-		warningstream << "No reward mod active!" << std::endl;
+	} catch(LuaError &e) {
+		errorstream << "No reward mod active!" << std::endl;
+		setFatalError(e);
 	}
     return reward;
+}
+
+bool Client::getTerminal() {
+	bool terminal = false;
+	try {
+		ClientScripting *scr = getScript();
+		if(scr) {
+			lua_State *L = scr->getStack();
+			// get global TERMINAL variable and push on stack
+			lua_getglobal(L, "TERMINAL");
+			// check whether it can be converted to boolean
+			if (!lua_isboolean(L, lua_gettop(L)))
+        		errorstream << "`TERMINAL' should be a boolean!" << std::endl;
+			// convert to bool
+			terminal = (bool)lua_toboolean(L, lua_gettop(L));
+			// remove from stack
+			lua_pop(L, 1);
+		}
+	} catch(LuaError &e) {
+		errorstream << "No reward mod active!" << std::endl;
+		setFatalError(e);
+	}
+    return terminal;
 }
 
 pb_objects::Image Client::getSendableData(core::position2di cursorPosition, bool isMenuActive, irr::video::IImage* cursorImage) {
