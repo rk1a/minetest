@@ -1,7 +1,7 @@
 from typing import Any, Dict, Optional
 
 from gym.wrappers import TimeLimit
-from minetest_env import Minetest
+from minetests.minetest_env import Minetest
 from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv
 
 if __name__ == "__main__":

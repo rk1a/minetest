@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from minetest_env import Minetest
+from minetests.minetest_env import Minetest
 
 env = Minetest(
     seed=42,
@@ -8,7 +8,7 @@ env = Minetest(
     clientmods=["random_v0"],
 )
 
-render = False
+render = True
 obs = env.reset()
 done = False
 while not done:
