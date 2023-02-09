@@ -44,7 +44,6 @@ protected:
 
 	virtual void createPipeline() {}
 	video::IImage *screenshot = nullptr;
-	bool headless;
 
 public:
 	RenderingCore(IrrlichtDevice *device, Client *client, Hud *hud, 
@@ -58,9 +57,7 @@ public:
 	RenderingCore &operator=(RenderingCore &&) = delete;
 
 
-	// void savetex(video::ITexture *texture, std::string name, video::IVideoDriver* videoDriver);
-
-	void initialize(bool headless);
+	void initialize();
 	void draw(video::SColor _skycolor, bool _show_hud, bool _show_minimap,
 			bool _draw_wield_tool, bool _draw_crosshair);
 

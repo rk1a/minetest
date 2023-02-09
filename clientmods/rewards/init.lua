@@ -1,7 +1,3 @@
--- define global reward variable
-reward = 0.0
-
--- reset reward every step
-minetest.register_globalstep(function(dtime)
-    reward = 0.0
-end)
+-- define global reward and terminal variables
+REWARD = 0.0
+TERMINAL = false

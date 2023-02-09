@@ -50,12 +50,12 @@ class DataRecorder:
                     num_attempts = 0
 
                     if self.debug:
-                        _, _, _, _, action = unpack_pb_obs(raw_data)
+                        _, rew, terminal, _, action = unpack_pb_obs(raw_data)
                         action_str = ""
                         for key in action.keys():
                             if key != "MOUSE" and action[key]:
                                 action_str += key + ", "
-                        print(action_str)
+                        print(f"action={action_str}, rew={rew}, T?={terminal}")
 
                     # Write data to new line
                     if not self.debug:
