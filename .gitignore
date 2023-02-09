@@ -95,6 +95,7 @@ doc/mkdocs/mkdocs.yml
 
 ## Build files
 build/
+build_headless/
 CMakeFiles
 Makefile
 cmake_install.cmake

@@ -69,6 +69,19 @@ set(ENABLE_UPDATE_CHECKER (NOT ${DEVELOPMENT_BUILD}) CACHE BOOL
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
 
 
+
+if(BUILD_CLIENT AND BUILD_HEADLESS)
+	find_package(SDL2 REQUIRED NO_DEFAULT_PATH)
+	# SDL2 exports targets since 2.0.6, but some distributions override config.
+	if(NOT TARGET SDL2::SDL2)
+		add_library(SDL2::SDL2 INTERFACE IMPORTED)
+		set_target_properties(SDL2::SDL2 PROPERTIES
+			INTERFACE_INCLUDE_DIRECTORIES ${SDL2_INCLUDE_DIRS}
+			INTERFACE_LINK_LIBRARIES ${SDL2_LIBRARIES}
+		)
+	endif()
+endif()
+
 set(IRRLICHTMT_BUILD_DIR "" CACHE PATH "Path to IrrlichtMt build directory.")
 if(NOT "${IRRLICHTMT_BUILD_DIR}" STREQUAL "")
 	find_package(IrrlichtMt QUIET
