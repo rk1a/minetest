@@ -93,6 +93,8 @@ def start_minetest_server(
     log_path: str = "log/{}.log",
     server_port: int = 30000,
     world_dir: str = "newworld",
+    sync_port: int = None,
+    sync_dtime: float = 0.001,
 ):
     cmd = [
         minetest_path,
@@ -100,12 +102,15 @@ def start_minetest_server(
         "--world",
         world_dir,
         "--gameid",
-        "minetest",  # TODO does this have to be unique?
+        "minetest",
         "--config",
         config_path,
         "--port",
         str(server_port),
     ]
+    if sync_port:
+        cmd.extend(["--sync-port", str(sync_port)])
+        cmd.extend(["--sync-dtime", str(sync_dtime)])
     stdout_file = log_path.format("server_stdout")
     stderr_file = log_path.format("server_stderr")
     with open(stdout_file, "w") as out, open(stderr_file, "w") as err:
@@ -122,6 +127,7 @@ def start_minetest_client(
     cursor_img: str = "cursors/mouse_cursor_white_16x16.png",
     client_name: str = "MinetestAgent",
     xvfb_headless: bool = False,
+    sync_port: int = None,
 ):
     cmd = [
         minetest_path,
@@ -150,6 +156,8 @@ def start_minetest_client(
         cmd.append("--headless")
     if cursor_img:
         cmd.extend(["--cursor-image", cursor_img])
+    if sync_port:
+        cmd.extend(["--sync-port", str(sync_port)])
 
     stdout_file = log_path.format("client_stdout")
     stderr_file = log_path.format("client_stderr")
@@ -178,6 +186,8 @@ class Minetest(gym.Env):
         servermods: List[str] = [],
         config_dict: Dict[str, Any] = {},
         xvfb_headless: bool = False,
+        sync_port: Optional[int] = None,
+        sync_dtime: Optional[float] = None,
     ):
         # Graphics settings
         self.xvfb_headless = xvfb_headless
@@ -237,6 +247,9 @@ class Minetest(gym.Env):
         # Used ports
         self.env_port = env_port  # MT env <-> MT client
         self.server_port = server_port  # MT client <-> MT server
+        self.sync_port = sync_port  # MT client <-> MT server
+
+        self.sync_dtime = sync_dtime
 
         # ZMQ objects
         self.socket = None
@@ -342,6 +355,8 @@ class Minetest(gym.Env):
             log_path,
             self.server_port,
             self.world_dir,
+            self.sync_port,
+            self.sync_dtime,
         )
 
         # (Re)start Minetest client
@@ -360,8 +375,9 @@ class Minetest(gym.Env):
             self.server_port,
             self.cursor_image_path,
             xvfb_headless=self.xvfb_headless,
+            sync_port=self.sync_port,
         )
-    
+
     def _check_world_dir(self):
         if self.world_dir is None:
             raise RuntimeError(
@@ -373,7 +389,7 @@ class Minetest(gym.Env):
         self._check_world_dir()
         if os.path.exists(self.world_dir):
             shutil.rmtree(self.world_dir)
-    
+
     def _check_config_path(self):
         if self.config_path is None:
             raise RuntimeError(

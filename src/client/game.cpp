@@ -900,7 +900,9 @@ private:
 
 	// ZMQ objects
 	zmqpp::context context;
-	zmqpp::socket* zmqclient;
+	zmqpp::socket* data_socket = nullptr;
+	zmqpp::context sync_context;
+	zmqpp::socket* sync_socket = nullptr;
 
 	// cursor image used in Gui recording
 	irr::video::IImage* cursorImage;
@@ -1059,9 +1061,15 @@ Game::~Game()
 		delete sound;
 	if(recorder)
 		delete recorder;
-	if(zmqclient) {
-		zmqclient->close();
-		delete zmqclient;
+	if(data_socket) {
+		// TODO this line might cause a segfault
+		// but Idk why
+		data_socket->close();
+		delete data_socket;
+	}
+	if(sync_socket) {
+		sync_socket->close();
+		delete sync_socket;
 	}
 
 	delete server; // deleted first to stop all server threads
@@ -1159,36 +1167,51 @@ bool Game::startup(bool *kill,
 			// with the python client; requests are observations
 			// replys are actions
 			socket_type = zmqpp::socket_type::request;
-			zmqclient = new zmqpp::socket(context, socket_type);
+			data_socket = new zmqpp::socket(context, socket_type);
 			std::string address = start_data.client_address;
-			std::cout << "Try to connect to: " << address << std::endl;
+			warningstream << "Try to connect to agent address: " << address << std::endl;
 			try {
-				zmqclient->connect(address);
+				data_socket->connect(address);
 			} catch (zmqpp::zmq_internal_exception &e) {
-				errorstream << "ZeroMQ error: " << e.what() << " (port: " << start_data.client_address << ")\n";
+				errorstream << "ZeroMQ error: " << e.what() << " (address: " << start_data.client_address << ")\n";
 				throw e;
 			};
+			
+			if (start_data.sync_port != "") {
+				// the dumb client is synchronized with the server (and other clients)
+				// via a REQ/REP pattern
+				zmqpp::socket_type sync_socket_type = zmqpp::socket_type::request;
+				std::string sync_address = "tcp://" + start_data.address + ":" + start_data.sync_port;
+				sync_socket = new zmqpp::socket(sync_context, sync_socket_type);
+				warningstream << "Try to connect to server address: " << sync_address << std::endl;
+				try {
+					sync_socket->connect(sync_address);
+				} catch (zmqpp::zmq_internal_exception &e) {
+					errorstream << "ZeroMQ error: " << e.what() << " (address: " << sync_address << ")\n";
+					throw e;
+				};
+			}
 		} else {
 			// if we are just recording, we use PUB/SUB pattern
 			socket_type = zmqpp::socket_type::publish;
-			zmqclient = new zmqpp::socket(context, socket_type);
+			data_socket = new zmqpp::socket(context, socket_type);
 			std::string address = start_data.client_address;
-			std::cout << "Try to bind to: " << address << std::endl;
+			warningstream << "Try to bind to: " << address << std::endl;
 			try {
-				zmqclient->bind(address);
+				data_socket->bind(address);
 			} catch (zmqpp::zmq_internal_exception &e) {
-				errorstream << "ZeroMQ error: " << e.what() << " (port: " << start_data.client_address << ")\n";
+				errorstream << "ZeroMQ error: " << e.what() << " (address: " << start_data.client_address << ")\n";
 				throw e;
 			};
 		}
 		
 		// pass socket to dumb handler and recorder
 		if (start_data.isDumbClient()) {
-			dynamic_cast<DumbClientInputHandler*>(input)->socket = zmqclient;
+			dynamic_cast<DumbClientInputHandler*>(input)->socket = data_socket;
 		}
 		if (start_data.record)  {
 			createRecorder(start_data);
-			recorder->sender = zmqclient;
+			recorder->sender = data_socket;
 		}
 
 		// setup provided cursor image
@@ -1234,6 +1257,21 @@ void Game::run()
 			|| (server && server->isShutdownRequested()))) {
 		
 
+		if (sync_socket != nullptr) {
+			// send client is done signal to server
+			zmqpp::message syncDoneMsg;
+			syncDoneMsg << "done";
+			sync_socket->send(syncDoneMsg);
+			// wait for server signal to update
+			zmqpp::message serverSyncMsg;
+			bool msgReceived = sync_socket->receive(serverSyncMsg);
+			if (!msgReceived)
+				return;
+			//serverSyncMsg >> dtime;
+			dtime = serverSyncMsg.get<f32>(0);
+			warningstream << "Received dtime = " << std::to_string(dtime) << std::endl;
+		}
+		
 		// send data out
 		std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
 		if(recorder) {
@@ -1260,7 +1298,8 @@ void Game::run()
 		// Calculate dtime =
 		//    m_rendering_engine->run() from this iteration
 		//  + Sleep time until the wanted FPS are reached
-		draw_times.limit(device, &dtime);
+		if (sync_socket == nullptr)
+			draw_times.limit(device, &dtime);
 
 		// Prepare render data for next iteration
 

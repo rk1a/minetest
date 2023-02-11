@@ -44,6 +44,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include <map>
 #include <vector>
 #include <unordered_set>
+#include <zmqpp/zmqpp.hpp>
 
 class ChatEvent;
 struct ChatEventChat;
@@ -149,7 +150,9 @@ public:
 		Address bind_addr,
 		bool dedicated,
 		ChatInterface *iface = nullptr,
-		std::string *on_shutdown_errmsg = nullptr
+		std::string *on_shutdown_errmsg = nullptr,
+		const std::string &sync_port = nullptr,
+		const float &sync_dtime = 0.0f
 	);
 	~Server();
 	DISABLE_CLASS_COPY(Server);
@@ -161,6 +164,8 @@ public:
 	void step(float dtime);
 	// This is run by ServerThread and does the actual processing
 	void AsyncRunStep(bool initial_step=false);
+	// This is used in server-client-sync mode
+	void SyncRunStep(bool initial_step=false);
 	void Receive();
 	PlayerSAO* StageTwoClientInit(session_t peer_id);
 
@@ -387,6 +392,10 @@ public:
 
 	// Environment mutex (envlock)
 	std::mutex m_env_mutex;
+
+	// ZMQ Objects
+	zmqpp::context sync_context;
+	zmqpp::socket* sync_socket = nullptr;
 
 private:
 	friend class EmergeThread;
@@ -615,6 +624,7 @@ private:
 	/*
 		Threads
 	*/
+	float m_sync_dtime = 0.0f;
 	// A buffer for time steps
 	// step() increments and AsyncRunStep() run by m_thread reads it.
 	float m_step_dtime = 0.0f;

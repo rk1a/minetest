@@ -389,6 +389,10 @@ static void set_allowed_options(OptionList *allowed_options)
 			_("Path to the cursor image file."))));
 	allowed_options->insert(std::make_pair("headless", ValueSpec(VALUETYPE_FLAG,
 			_("Start client in headless mode."))));
+	allowed_options->insert(std::make_pair("sync-port", ValueSpec(VALUETYPE_STRING,
+			_("Internal port used for syncing server and dumb clients."))));
+	allowed_options->insert(std::make_pair("sync-dtime", ValueSpec(VALUETYPE_STRING,
+			_("Ingame time difference between steps when using server-client synchronization."))));
 
 
 
@@ -697,6 +701,12 @@ static bool game_configure(GameParams *game_params, const Settings &cmd_args)
 
 static void game_configure_port(GameParams *game_params, const Settings &cmd_args)
 {
+	if (cmd_args.exists("sync-port")) {
+		game_params->sync_port = cmd_args.get("sync-port");
+		if (cmd_args.exists("sync-dtime")) {
+			game_params->sync_dtime = cmd_args.getFloat("sync-dtime");
+		}
+	}
 	if (cmd_args.exists("port")) {
 		game_params->socket_port = cmd_args.getU16("port");
 	} else {
@@ -1023,7 +1033,7 @@ static bool run_dedicated_server(const GameParams &game_params, const Settings &
 		try {
 			// Create server
 			Server server(game_params.world_path, game_params.game_spec, false,
-				bind_addr, true);
+				bind_addr, true, nullptr, nullptr, game_params.sync_port, game_params.sync_dtime);
 			server.start();
 
 			// Run server

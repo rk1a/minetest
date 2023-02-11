@@ -70,6 +70,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "database/database-files.h"
 #include "database/database-dummy.h"
 #include "gameparams.h"
+#include <zmqpp/zmqpp.hpp>
 
 class ClientNotFoundException : public BaseException
 {
@@ -230,7 +231,9 @@ Server::Server(
 		Address bind_addr,
 		bool dedicated,
 		ChatInterface *iface,
-		std::string *on_shutdown_errmsg
+		std::string *on_shutdown_errmsg,
+		const std::string &sync_port,
+		const float &sync_dtime
 	):
 	m_bind_addr(bind_addr),
 	m_path_world(path_world),
@@ -250,13 +253,28 @@ Server::Server(
 	m_clients(m_con),
 	m_admin_chat(iface),
 	m_on_shutdown_errmsg(on_shutdown_errmsg),
-	m_modchannel_mgr(new ModChannelMgr())
+	m_modchannel_mgr(new ModChannelMgr()),
+	m_sync_dtime(sync_dtime)
 {
 	if (m_path_world.empty())
 		throw ServerError("Supplied empty world path");
 
 	if (!gamespec.isValid())
 		throw ServerError("Supplied invalid gamespec");
+	
+	// This socket is used to sync with the connected client(s)
+	if (sync_port != "") {
+		std::string sync_address = "tcp://" + bind_addr.serializeString() + ":" + sync_port;
+		zmqpp::socket_type socket_type = zmqpp::socket_type::reply;
+		sync_socket = new zmqpp::socket(sync_context, socket_type);
+		std::cout << "Try to bind to: " << sync_address << std::endl;
+		try {
+			sync_socket->bind(sync_address);
+		} catch (zmqpp::zmq_internal_exception &e) {
+			errorstream << "ZeroMQ error: " << e.what() << " (address: " << sync_address << ")\n";
+			throw e;
+		};
+	}
 
 #if USE_PROMETHEUS
 	m_metrics_backend = std::unique_ptr<MetricsBackend>(createPrometheusMetricsBackend());
@@ -388,6 +406,11 @@ Server::~Server()
 	while (!m_unsent_map_edit_queue.empty()) {
 		delete m_unsent_map_edit_queue.front();
 		m_unsent_map_edit_queue.pop();
+	}
+
+	if(sync_socket != nullptr) {
+		sync_socket->close();
+		delete sync_socket;
 	}
 }
 
@@ -532,8 +555,9 @@ void Server::start()
 	m_con->SetTimeoutMs(30);
 	m_con->Serve(m_bind_addr);
 
-	// Start thread
-	m_thread->start();
+	if (sync_socket == nullptr)
+		// Start async thread
+		m_thread->start();
 
 	// ASCII art for the win!
 	std::cerr
@@ -563,24 +587,519 @@ void Server::stop()
 
 void Server::step(float dtime)
 {
-	// Limit a bit
-	if (dtime > 2.0)
-		dtime = 2.0;
-	{
-		MutexAutoLock lock(m_step_dtime_mutex);
-		m_step_dtime += dtime;
-	}
-	// Throw if fatal error occurred in thread
-	std::string async_err = m_async_fatal_error.get();
-	if (!async_err.empty()) {
-		if (!m_simple_singleplayer_mode) {
-			m_env->kickAllPlayers(SERVER_ACCESSDENIED_CRASH,
-				g_settings->get("kick_msg_crash"),
-				g_settings->getBool("ask_reconnect_on_crash"));
+	if (sync_socket == nullptr) {
+		// Limit a bit
+		if (dtime > 2.0)
+			dtime = 2.0;
+		{
+			MutexAutoLock lock(m_step_dtime_mutex);
+			m_step_dtime += dtime;
 		}
-		throw ServerError("AsyncErr: " + async_err);
+		// Throw if fatal error occurred in thread
+		std::string async_err = m_async_fatal_error.get();
+		if (!async_err.empty()) {
+			if (!m_simple_singleplayer_mode) {
+				m_env->kickAllPlayers(SERVER_ACCESSDENIED_CRASH,
+					g_settings->get("kick_msg_crash"),
+					g_settings->getBool("ask_reconnect_on_crash"));
+			}
+			throw ServerError("AsyncErr: " + async_err);
+		}
+	} else {
+		// Limit a bit
+		if (dtime > 2.0)
+			dtime = 2.0;
+		//m_step_dtime += dtime;
+		m_step_dtime = m_sync_dtime;
+		try {
+			SyncRunStep();
+			Receive();
+		} catch (con::PeerNotFoundException &e) {
+			infostream<<"Server: PeerNotFoundException"<<std::endl;
+		} catch (ClientNotFoundException &e) {
+		} catch (con::ConnectionBindFailed &e) {
+			setAsyncFatalError(e.what());
+		} catch (LuaError &e) {
+			setAsyncFatalError(e);
+		}
 	}
 }
+
+void Server::SyncRunStep(bool initial_step)
+{
+
+	float dtime;
+	{
+		MutexAutoLock lock1(m_step_dtime_mutex);
+		dtime = m_step_dtime;
+	}
+
+	{
+		// Send blocks to clients
+		SendBlocks(dtime);
+	}
+
+	//if((dtime < 0.001) && !initial_step)
+	//	return;
+
+	ScopeProfiler sp(g_profiler, "Server::AsyncRunStep()", SPT_AVG);
+
+	{
+		MutexAutoLock lock1(m_step_dtime_mutex);
+		m_step_dtime -= dtime;
+	}
+
+	{
+		warningstream << "Current dtime = " << dtime << ", m_step_dtime= " << m_step_dtime << std::endl;
+	}
+
+	/*
+		Update uptime
+	*/
+	m_uptime_counter->increment(dtime);
+
+	handlePeerChanges();
+
+	/*
+		Update time of day and overall game time
+	*/
+	m_env->setTimeOfDaySpeed(g_settings->getFloat("time_speed"));
+
+	/*
+		Send to clients at constant intervals
+	*/
+
+	m_time_of_day_send_timer -= dtime;
+	if (m_time_of_day_send_timer < 0.0) {
+		m_time_of_day_send_timer = g_settings->getFloat("time_send_interval");
+		u16 time = m_env->getTimeOfDay();
+		float time_speed = g_settings->getFloat("time_speed");
+		SendTimeOfDay(PEER_ID_INEXISTENT, time, time_speed);
+
+		m_timeofday_gauge->set(time);
+	}
+
+	{
+		MutexAutoLock lock(m_env_mutex);
+		// Figure out and report maximum lag to environment
+		float max_lag = m_env->getMaxLagEstimate();
+		max_lag *= 0.9998; // Decrease slowly (about half per 5 minutes)
+		if(dtime > max_lag){
+			if(dtime > 0.1 && dtime > max_lag * 2.0)
+				infostream<<"Server: Maximum lag peaked to "<<dtime
+						<<" s"<<std::endl;
+			max_lag = dtime;
+		}
+		m_env->reportMaxLagEstimate(max_lag);
+
+		// Step environment
+		m_env->step(dtime);
+	}
+
+	static const float map_timer_and_unload_dtime = 2.92;
+	if(m_map_timer_and_unload_interval.step(dtime, map_timer_and_unload_dtime))
+	{
+		MutexAutoLock lock(m_env_mutex);
+		// Run Map's timers and unload unused data
+		ScopeProfiler sp(g_profiler, "Server: map timer and unload");
+		m_env->getMap().timerUpdate(map_timer_and_unload_dtime,
+			std::max(g_settings->getFloat("server_unload_unused_data_timeout"), 0.0f),
+			-1);
+	}
+
+	/*
+		Listen to the admin chat, if available
+	*/
+	if (m_admin_chat) {
+		if (!m_admin_chat->command_queue.empty()) {
+			MutexAutoLock lock(m_env_mutex);
+			while (!m_admin_chat->command_queue.empty()) {
+				ChatEvent *evt = m_admin_chat->command_queue.pop_frontNoEx();
+				handleChatInterfaceEvent(evt);
+				delete evt;
+			}
+		}
+		m_admin_chat->outgoing_queue.push_back(
+			new ChatEventTimeInfo(m_env->getGameTime(), m_env->getTimeOfDay()));
+	}
+
+	/*
+		Do background stuff
+	*/
+
+	/* Transform liquids */
+	m_liquid_transform_timer += dtime;
+	if(m_liquid_transform_timer >= m_liquid_transform_every)
+	{
+		m_liquid_transform_timer -= m_liquid_transform_every;
+
+		MutexAutoLock lock(m_env_mutex);
+
+		ScopeProfiler sp(g_profiler, "Server: liquid transform");
+
+		std::map<v3s16, MapBlock*> modified_blocks;
+		m_env->getServerMap().transformLiquids(modified_blocks, m_env);
+
+		/*
+			Set the modified blocks unsent for all the clients
+		*/
+		if (!modified_blocks.empty()) {
+			SetBlocksNotSent(modified_blocks);
+		}
+	}
+	m_clients.step(dtime);
+
+	// increase/decrease lag gauge gradually
+	if (m_lag_gauge->get() > dtime) {
+		m_lag_gauge->decrement(dtime/100);
+	} else {
+		m_lag_gauge->increment(dtime/100);
+	}
+
+	{
+		float &counter = m_step_pending_dyn_media_timer;
+		counter += dtime;
+		if (counter >= 5.0f) {
+			stepPendingDynMediaCallbacks(counter);
+			counter = 0;
+		}
+	}
+
+
+#if USE_CURL
+	// send masterserver announce
+	{
+		float &counter = m_masterserver_timer;
+		if (!isSingleplayer() && (!counter || counter >= 300.0) &&
+				g_settings->getBool("server_announce")) {
+			ServerList::sendAnnounce(counter ? ServerList::AA_UPDATE :
+						ServerList::AA_START,
+					m_bind_addr.getPort(),
+					m_clients.getPlayerNames(),
+					m_uptime_counter->get(),
+					m_env->getGameTime(),
+					m_lag_gauge->get(),
+					m_gamespec.id,
+					Mapgen::getMapgenName(m_emerge->mgparams->mgtype),
+					m_modmgr->getMods(),
+					m_dedicated);
+			counter = 0.01;
+		}
+		counter += dtime;
+	}
+#endif
+
+	/*
+		Check added and deleted active objects
+	*/
+	{
+		//infostream<<"Server: Checking added and deleted active objects"<<std::endl;
+		MutexAutoLock envlock(m_env_mutex);
+
+		{
+			ClientInterface::AutoLock clientlock(m_clients);
+			const RemoteClientMap &clients = m_clients.getClientList();
+			ScopeProfiler sp(g_profiler, "Server: update objects within range");
+
+			m_player_gauge->set(clients.size());
+			for (const auto &client_it : clients) {
+				RemoteClient *client = client_it.second;
+
+				if (client->getState() < CS_DefinitionsSent)
+					continue;
+
+				// This can happen if the client times out somehow
+				if (!m_env->getPlayer(client->peer_id))
+					continue;
+
+				PlayerSAO *playersao = getPlayerSAO(client->peer_id);
+				if (!playersao)
+					continue;
+
+				SendActiveObjectRemoveAdd(client, playersao);
+			}
+		}
+
+		// Write changes to the mod storage
+		m_mod_storage_save_timer -= dtime;
+		if (m_mod_storage_save_timer <= 0.0f) {
+			m_mod_storage_save_timer = g_settings->getFloat("server_map_save_interval");
+			m_mod_storage_database->endSave();
+			m_mod_storage_database->beginSave();
+		}
+	}
+
+	/*
+		Send object messages
+	*/
+	{
+		MutexAutoLock envlock(m_env_mutex);
+		ScopeProfiler sp(g_profiler, "Server: send SAO messages");
+
+		// Key = object id
+		// Value = data sent by object
+		std::unordered_map<u16, std::vector<ActiveObjectMessage>*> buffered_messages;
+
+		// Get active object messages from environment
+		ActiveObjectMessage aom(0);
+		u32 count_reliable = 0, count_unreliable = 0;
+		for(;;) {
+			if (!m_env->getActiveObjectMessage(&aom))
+				break;
+			if (aom.reliable)
+				count_reliable++;
+			else
+				count_unreliable++;
+
+			std::vector<ActiveObjectMessage>* message_list = nullptr;
+			auto n = buffered_messages.find(aom.id);
+			if (n == buffered_messages.end()) {
+				message_list = new std::vector<ActiveObjectMessage>;
+				buffered_messages[aom.id] = message_list;
+			} else {
+				message_list = n->second;
+			}
+			message_list->push_back(std::move(aom));
+		}
+
+		m_aom_buffer_counter[0]->increment(count_reliable);
+		m_aom_buffer_counter[1]->increment(count_unreliable);
+
+		{
+			ClientInterface::AutoLock clientlock(m_clients);
+			const RemoteClientMap &clients = m_clients.getClientList();
+			// Route data to every client
+			std::string reliable_data, unreliable_data;
+			for (const auto &client_it : clients) {
+				reliable_data.clear();
+				unreliable_data.clear();
+				RemoteClient *client = client_it.second;
+				PlayerSAO *player = getPlayerSAO(client->peer_id);
+				// Go through all objects in message buffer
+				for (const auto &buffered_message : buffered_messages) {
+					// If object does not exist or is not known by client, skip it
+					u16 id = buffered_message.first;
+					ServerActiveObject *sao = m_env->getActiveObject(id);
+					if (!sao || client->m_known_objects.find(id) == client->m_known_objects.end())
+						continue;
+
+					// Get message list of object
+					std::vector<ActiveObjectMessage>* list = buffered_message.second;
+					// Go through every message
+					for (const ActiveObjectMessage &aom : *list) {
+						// Send position updates to players who do not see the attachment
+						if (aom.datastring[0] == AO_CMD_UPDATE_POSITION) {
+							if (sao->getId() == player->getId())
+								continue;
+
+							// Do not send position updates for attached players
+							// as long the parent is known to the client
+							ServerActiveObject *parent = sao->getParent();
+							if (parent && client->m_known_objects.find(parent->getId()) !=
+									client->m_known_objects.end())
+								continue;
+						}
+
+						// Add full new data to appropriate buffer
+						std::string &buffer = aom.reliable ? reliable_data : unreliable_data;
+						char idbuf[2];
+						writeU16((u8*) idbuf, aom.id);
+						// u16 id
+						// std::string data
+						buffer.append(idbuf, sizeof(idbuf));
+						buffer.append(serializeString16(aom.datastring));
+					}
+				}
+				/*
+					reliable_data and unreliable_data are now ready.
+					Send them.
+				*/
+				if (!reliable_data.empty()) {
+					SendActiveObjectMessages(client->peer_id, reliable_data);
+				}
+
+				if (!unreliable_data.empty()) {
+					SendActiveObjectMessages(client->peer_id, unreliable_data, false);
+				}
+			}
+		}
+
+		// Clear buffered_messages
+		for (auto &buffered_message : buffered_messages) {
+			delete buffered_message.second;
+		}
+	}
+
+	/*
+		Send queued-for-sending map edit events.
+	*/
+	{
+		// We will be accessing the environment
+		MutexAutoLock lock(m_env_mutex);
+
+		// Single change sending is disabled if queue size is big
+		bool disable_single_change_sending = false;
+		if(m_unsent_map_edit_queue.size() >= 4)
+			disable_single_change_sending = true;
+
+		const auto event_count = m_unsent_map_edit_queue.size();
+		m_map_edit_event_counter->increment(event_count);
+
+		// We'll log the amount of each
+		Profiler prof;
+
+		std::unordered_set<v3s16> node_meta_updates;
+
+		while (!m_unsent_map_edit_queue.empty()) {
+			MapEditEvent* event = m_unsent_map_edit_queue.front();
+			m_unsent_map_edit_queue.pop();
+
+			// Players far away from the change are stored here.
+			// Instead of sending the changes, MapBlocks are set not sent
+			// for them.
+			std::unordered_set<u16> far_players;
+
+			switch (event->type) {
+			case MEET_ADDNODE:
+			case MEET_SWAPNODE:
+				prof.add("MEET_ADDNODE", 1);
+				sendAddNode(event->p, event->n, &far_players,
+						disable_single_change_sending ? 5 : 30,
+						event->type == MEET_ADDNODE);
+				break;
+			case MEET_REMOVENODE:
+				prof.add("MEET_REMOVENODE", 1);
+				sendRemoveNode(event->p, &far_players,
+						disable_single_change_sending ? 5 : 30);
+				break;
+			case MEET_BLOCK_NODE_METADATA_CHANGED: {
+				prof.add("MEET_BLOCK_NODE_METADATA_CHANGED", 1);
+				if (!event->is_private_change) {
+					node_meta_updates.emplace(event->p);
+				}
+
+				if (MapBlock *block = m_env->getMap().getBlockNoCreateNoEx(
+						getNodeBlockPos(event->p))) {
+					block->raiseModified(MOD_STATE_WRITE_NEEDED,
+						MOD_REASON_REPORT_META_CHANGE);
+				}
+				break;
+			}
+			case MEET_OTHER:
+				prof.add("MEET_OTHER", 1);
+				for (const v3s16 &modified_block : event->modified_blocks) {
+					m_clients.markBlockposAsNotSent(modified_block);
+				}
+				break;
+			default:
+				prof.add("unknown", 1);
+				warningstream << "Server: Unknown MapEditEvent "
+						<< ((u32)event->type) << std::endl;
+				break;
+			}
+
+			/*
+				Set blocks not sent to far players
+			*/
+			if (!far_players.empty()) {
+				// Convert list format to that wanted by SetBlocksNotSent
+				std::map<v3s16, MapBlock*> modified_blocks2;
+				for (const v3s16 &modified_block : event->modified_blocks) {
+					modified_blocks2[modified_block] =
+							m_env->getMap().getBlockNoCreateNoEx(modified_block);
+				}
+
+				// Set blocks not sent
+				for (const u16 far_player : far_players) {
+					if (RemoteClient *client = getClient(far_player))
+						client->SetBlocksNotSent(modified_blocks2);
+				}
+			}
+
+			delete event;
+		}
+
+		if (event_count >= 5) {
+			infostream << "Server: MapEditEvents:" << std::endl;
+			prof.print(infostream);
+		} else if (event_count != 0) {
+			verbosestream << "Server: MapEditEvents:" << std::endl;
+			prof.print(verbosestream);
+		}
+
+		// Send all metadata updates
+		if (!node_meta_updates.empty())
+			sendMetadataChanged(node_meta_updates);
+	}
+
+	/*
+		Trigger emerge thread
+		Doing this every 2s is left over from old code, unclear if this is still needed.
+	*/
+	{
+		float &counter = m_emergethread_trigger_timer;
+		counter -= dtime;
+		if (counter <= 0.0f) {
+			counter = 2.0f;
+
+			m_emerge->startThreads();
+		}
+	}
+
+	// Save map, players and auth stuff
+	{
+		float &counter = m_savemap_timer;
+		counter += dtime;
+		static thread_local const float save_interval =
+			g_settings->getFloat("server_map_save_interval");
+		if (counter >= save_interval) {
+			counter = 0.0;
+			MutexAutoLock lock(m_env_mutex);
+
+			ScopeProfiler sp(g_profiler, "Server: map saving (sum)");
+
+			// Save ban file
+			if (m_banmanager->isModified()) {
+				m_banmanager->save();
+			}
+
+			// Save changed parts of map
+			m_env->getMap().save(MOD_STATE_WRITE_NEEDED);
+
+			// Save players
+			m_env->saveLoadedPlayers();
+
+			// Save environment metadata
+			m_env->saveMeta();
+		}
+	}
+
+	m_shutdown_state.tick(dtime, this);
+
+	if (m_clients.getClientIDs().size() > 0) {
+		warningstream << "Num connected clients " << m_clients.getClientIDs().size() << std::endl;
+		// Wait for client update TODO extend to multiple clients
+		zmqpp::message clientSyncMsg;
+		bool msgReceived = false;
+		try {
+			msgReceived = sync_socket->receive(clientSyncMsg);
+		} catch (zmqpp::zmq_internal_exception &e) {
+			warningstream << "ZeroMQ error: " << e.what() << "\n";
+		}
+		if (!msgReceived)
+			return;
+		std::string clientMsg;
+		clientSyncMsg >> clientMsg;
+		warningstream << "Client response: " << clientMsg << std::endl;
+
+		// Send custom dtime to clients
+		zmqpp::message syncMsg;
+		syncMsg << m_sync_dtime;
+		warningstream << "Sending dtime to clients... " << std::endl;
+		sync_socket->send(syncMsg);
+	}
+}
+
 
 void Server::AsyncRunStep(bool initial_step)
 {
@@ -1310,6 +1829,7 @@ bool Server::getClientInfo(session_t peer_id, ClientInfo &ret)
 
 void Server::handlePeerChanges()
 {
+	// TODO handle ZMQ Sockets to all clients
 	while(!m_peer_change_queue.empty())
 	{
 		con::PeerChange c = m_peer_change_queue.front();
@@ -3900,10 +4420,21 @@ void dedicated_server_loop(Server &server, bool &kill)
 	 * provides a way to main.cpp to kill the server externally (bool &kill).
 	 */
 
+	if (server.sync_socket) {
+		try {
+			server.SyncRunStep(true);
+		} catch (con::ConnectionBindFailed &e) {
+			server.setAsyncFatalError(e.what());
+		} catch (LuaError &e) {
+			server.setAsyncFatalError(e);
+		}
+	}
+
 	for(;;) {
 		// This is kind of a hack but can be done like this
 		// because server.step() is very light
-		sleep_ms((int)(steplen*1000.0));
+		if (server.sync_socket == nullptr)
+			sleep_ms((int)(steplen*1000.0));
 		server.step(steplen);
 
 		if (server.isShutdownRequested() || kill)
