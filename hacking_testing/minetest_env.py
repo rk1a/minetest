@@ -168,6 +168,7 @@ def start_minetest_client(
 
 class Minetest(gym.Env):
     metadata = {"render.modes": ["rgb_array", "human"]}
+    default_display_size = (1024, 600)
 
     def __init__(
         self,
@@ -178,7 +179,7 @@ class Minetest(gym.Env):
         config_path: Optional[os.PathLike] = None,
         cursor_image_path: Optional[os.PathLike] = None,
         world_dir: Optional[os.PathLike] = None,
-        display_size: Tuple[int, int] = (1024, 600),
+        display_size: Tuple[int, int] = default_display_size,
         fov: int = 72,
         seed: Optional[int] = None,
         start_minetest: bool = True,
@@ -414,6 +415,9 @@ class Minetest(gym.Env):
             # Set display size
             config_file.write(f"screen_w = {self.display_size[0]}\n")
             config_file.write(f"screen_h = {self.display_size[1]}\n")
+            # Adapt HUD size to display size
+            hud_scale = self.display_size[0] / Minetest.default_display_size[0]
+            config_file.write(f"hud_scaling = {hud_scale}\n")
 
             # Set FOV
             config_file.write(f"fov = {self.fov_y}\n")
