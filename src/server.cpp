@@ -612,8 +612,8 @@ void Server::step(float dtime)
 		//m_step_dtime += dtime;
 		m_step_dtime = m_sync_dtime;
 		try {
-			SyncRunStep();
 			Receive();
+			SyncRunStep();
 		} catch (con::PeerNotFoundException &e) {
 			infostream<<"Server: PeerNotFoundException"<<std::endl;
 		} catch (ClientNotFoundException &e) {
@@ -639,18 +639,12 @@ void Server::SyncRunStep(bool initial_step)
 		SendBlocks(dtime);
 	}
 
-	//if((dtime < 0.001) && !initial_step)
-	//	return;
 
-	ScopeProfiler sp(g_profiler, "Server::AsyncRunStep()", SPT_AVG);
+	ScopeProfiler sp(g_profiler, "Server::SyncRunStep()", SPT_AVG);
 
 	{
 		MutexAutoLock lock1(m_step_dtime_mutex);
 		m_step_dtime -= dtime;
-	}
-
-	{
-		warningstream << "Current dtime = " << dtime << ", m_step_dtime= " << m_step_dtime << std::endl;
 	}
 
 	/*
@@ -1077,7 +1071,7 @@ void Server::SyncRunStep(bool initial_step)
 	m_shutdown_state.tick(dtime, this);
 
 	if (m_clients.getClientIDs().size() > 0) {
-		warningstream << "Num connected clients " << m_clients.getClientIDs().size() << std::endl;
+		//warningstream << "Num connected clients " << m_clients.getClientIDs().size() << std::endl;
 		// Wait for client update TODO extend to multiple clients
 		zmqpp::message clientSyncMsg;
 		bool msgReceived = false;
@@ -1090,12 +1084,17 @@ void Server::SyncRunStep(bool initial_step)
 			return;
 		std::string clientMsg;
 		clientSyncMsg >> clientMsg;
-		warningstream << "Client response: " << clientMsg << std::endl;
+		//warningstream << "Client response: " << clientMsg << std::endl;
 
-		// Send custom dtime to clients
+		// Send custom dtime, reward and terminal values to client(s)
+		// TODO this thas to be adapted for multiplayer use!
+		std::string playername = m_clients.m_clients_names.at(0);
+		float reward = getReward(playername);
+		bool terminal = getTerminal(playername);
 		zmqpp::message syncMsg;
 		syncMsg << m_sync_dtime;
-		warningstream << "Sending dtime to clients... " << std::endl;
+		syncMsg << reward;
+		syncMsg << terminal;
 		sync_socket->send(syncMsg);
 	}
 }
@@ -4444,12 +4443,12 @@ void dedicated_server_loop(Server &server, bool &kill)
 			Profiler
 		*/
 		if (profiler_print_interval != 0) {
-			if(m_profiler_interval.step(steplen, profiler_print_interval))
-			{
+			//if(m_profiler_interval.step(steplen, profiler_print_interval))
+			//{
 				infostream<<"Profiler:"<<std::endl;
-				g_profiler->print(infostream);
+				g_profiler->print(warningstream);
 				g_profiler->clear();
-			}
+			//}
 		}
 	}
 
@@ -4652,4 +4651,107 @@ bool Server::migrateModStorageDatabase(const GameParams &game_params, const Sett
 	}
 
 	return succeeded;
+}
+
+static void stackDump (lua_State *L) {
+      int i;
+      int top = lua_gettop(L);
+      for (i = 1; i <= top; i++) {  /* repeat for each level */
+        int t = lua_type(L, i);
+        switch (t) {
+    
+          case LUA_TSTRING:  /* strings */
+            printf("`%s'", lua_tostring(L, i));
+            break;
+    
+          case LUA_TBOOLEAN:  /* booleans */
+            printf(lua_toboolean(L, i) ? "true" : "false");
+            break;
+    
+          case LUA_TNUMBER:  /* numbers */
+            printf("%g", lua_tonumber(L, i));
+            break;
+    
+          default:  /* other values */
+            printf("%s", lua_typename(L, t));
+            break;
+    
+        }
+        printf("  ");  /* put a separator */
+      }
+      printf("\n");  /* end the listing */
+    }
+
+/* assume that REWARD table is on the stack top */
+float Server::getRewardField(lua_State *L, const char *key) {
+	float reward = 0.;
+	lua_pushstring(L, key);
+	lua_gettable(L, -2);  /* get REWARD[key] */
+	if (!lua_isnumber(L, -1)) {
+		errorstream << std::string("`REWARD[" + std::string(key) + "]' should be a number!").c_str() << std::endl;
+	} else {
+		reward = (float)lua_tonumber(L, lua_gettop(L));
+	}
+	lua_pop(L, 1);  /* remove number */
+	return reward;
+}
+
+float Server::getReward(std::string playername) {
+	float reward = 0.0;
+	try {
+		if(m_script) {
+			lua_State *L = m_script->getStack();
+			// read out global REWARD variable
+			lua_getglobal(L, "REWARD"); // push global REWARD value to stack
+			if (!lua_istable(L, -1))
+				FATAL_ERROR("`REWARD' is not a table");
+			// Get reward of player
+			reward = getRewardField(L, playername.c_str());
+			// reset global REWARD to zero
+			lua_pushstring(L, playername.c_str()); // push playername to stack
+			lua_pushnumber(L, 0.); // push zero to the stack
+			lua_settable(L, -3); // REWARD[playername] = zero + pop playername and zero
+			//lua_setglobal(L, "REWARD"); // pop zero and assign to REWARD
+			lua_pop(L, 1); // remove REWARD table from stack
+		}
+	} catch(LuaError &e) {
+		errorstream << "No reward mod active!" << std::endl;
+		FATAL_ERROR(e.what());
+	}
+    return reward;
+}
+
+/* assume that TERMINAL table is on the stack top */
+bool Server::getTerminalField(lua_State *L, const char *key) {
+	bool terminal = false;
+	lua_pushstring(L, key);
+	lua_gettable(L, -2);  /* get TERMINAL[key] */
+	if (!lua_isboolean(L, -1)) {
+		errorstream << std::string("`TERMINAL[" + std::string(key) + "]' should be a boolean!").c_str() << std::endl;
+	} else {
+		terminal = (bool)lua_toboolean(L, lua_gettop(L));
+	}
+	lua_pop(L, 1);  /* remove bool */
+	return terminal;
+}
+
+bool Server::getTerminal(std::string playername) {
+	bool terminal = false;
+	try {
+		if(m_script) {
+			lua_State *L = m_script->getStack();
+			// get global TERMINAL variable and push on stack
+			lua_getglobal(L, "TERMINAL");
+			if (!lua_istable(L, -1))
+				FATAL_ERROR("`TERMINAL' is not a table");
+			// get terminal value of player
+			terminal = getTerminalField(L, playername.c_str());
+			// remove from stack
+			lua_pop(L, 1);
+		}
+	} catch(LuaError &e) {
+		errorstream << "No reward mod active!" << std::endl;
+		FATAL_ERROR(e.what());
+	}
+    return terminal;
 }

@@ -516,6 +516,7 @@ protected:
 
 	RemoteClientMap& getClientList() { return m_clients; }
 
+	std::vector<std::string> m_clients_names; //for announcing masterserver
 private:
 	/* update internal player list */
 	void UpdatePlayerList();
@@ -525,7 +526,6 @@ private:
 	std::recursive_mutex m_clients_mutex;
 	// Connected clients (behind the con mutex)
 	RemoteClientMap m_clients;
-	std::vector<std::string> m_clients_names; //for announcing masterserver
 
 	// Environment
 	ServerEnvironment *m_env;

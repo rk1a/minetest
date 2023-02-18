@@ -280,11 +280,17 @@ class Minetest(gym.Env):
         )
 
         # Configure mods
-        self.clientmods = clientmods + ["rewards"]  # require the base rewards mod
-        # add client mod names in case they entail a server side component
-        self.servermods = servermods + clientmods
-        self._enable_clientmods()
-        self._enable_servermods()
+        self.clientmods = clientmods
+        self.servermods = servermods
+        if self.sync_port:
+            self.servermods += ["rewards"]  # require the server rewards mod
+            self._enable_servermods()
+        else:
+            self.clientmods += ["rewards"]  # require the client rewards mod
+            # add client mod names in case they entail a server side component
+            self.servermods += clientmods
+            self._enable_clientmods()
+            self._enable_servermods()
 
         # Write minetest.conf
         self.config_dict = config_dict
@@ -329,7 +335,7 @@ class Minetest(gym.Env):
                     f" It must be located at {mod_folder}.",
                 )
             else:
-                shutil.copytree(mod_folder, world_mod_folder)
+                shutil.copytree(mod_folder, world_mod_folder, dirs_exist_ok=True)
 
     def _reset_zmq(self):
         if self.socket:
@@ -411,6 +417,14 @@ class Minetest(gym.Env):
             config_file.write("enable_client_modding = true\n")
             config_file.write("csm_restriction_flags = 0\n")
             config_file.write("enable_mod_channels = true\n")
+            config_file.write("server_map_save_interval = 1000000\n")
+            config_file.write("profiler_print_interval = 0\n")
+            config_file.write("active_block_range = 2\n")
+            config_file.write("abm_time_budget = 0.01\n")
+            config_file.write("abm_interval = 0.1\n")
+            config_file.write("active_block_mgmt_interval = 4.0\n")
+            config_file.write("server_unload_unused_data_timeout = 1000000\n")
+            config_file.write("debug_log_level = verbose\n")
 
             # Set display size
             config_file.write(f"screen_w = {self.display_size[0]}\n")

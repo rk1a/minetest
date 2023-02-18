@@ -397,6 +397,11 @@ public:
 	zmqpp::context sync_context;
 	zmqpp::socket* sync_socket = nullptr;
 
+	// RL framework
+	float getReward(std::string playername);
+	float getRewardField(lua_State *L, const char* key);
+	bool getTerminal(std::string playername);
+	bool getTerminalField(lua_State *L, const char* key);
 private:
 	friend class EmergeThread;
 	friend class RemoteClient;

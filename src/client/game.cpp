@@ -1256,7 +1256,8 @@ void Game::run()
 			&& !(*kill || g_gamecallback->shutdown_requested
 			|| (server && server->isShutdownRequested()))) {
 		
-
+		float reward;
+		bool terminal;
 		if (sync_socket != nullptr) {
 			// send client is done signal to server
 			zmqpp::message syncDoneMsg;
@@ -1269,18 +1270,26 @@ void Game::run()
 				return;
 			//serverSyncMsg >> dtime;
 			dtime = serverSyncMsg.get<f32>(0);
-			warningstream << "Received dtime = " << std::to_string(dtime) << std::endl;
+			reward = serverSyncMsg.get<float>(1);
+			terminal = serverSyncMsg.get<bool>(2);
+		
+			//warningstream << "Received dtime = " << std::to_string(dtime) << std::endl;
+		} else {
+			reward = client->getReward();
+			terminal = client->getTerminal();
 		}
 		
 		// send data out
 		std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
 		if(recorder) {
-			pb_objects::Image pb_img = client->getSendableData(input->getMousePos(), isMenuActive(), cursorImage);
+			pb_objects::Image pb_img = client->getPixelData(input->getMousePos(), isMenuActive(), cursorImage);
 			recorder->setImage(pb_img);
-			recorder->sendDataOut(isMenuActive(), cursorImage, client, input);
+			recorder->setReward(reward);
+			recorder->setTerminal(terminal);
+			recorder->sendObservation();
 		}
 		std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
-		warningstream << "Time difference = " << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() << "[µs]" << std::endl;
+		//warningstream << "Time difference = " << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() << "[µs]" << std::endl;
 
 		const irr::core::dimension2d<u32> &current_screen_size =
 			m_rendering_engine->get_video_driver()->getScreenSize();
@@ -1319,6 +1328,11 @@ void Game::run()
 
 		updateProfilers(stats, draw_times, dtime);
 		processUserInput(dtime);
+		// record action
+		if(recorder) {
+			pb_objects::Action lastAction = input->getLastAction();
+			recorder->setAction(lastAction);
+		}
 		// Update camera before player movement to avoid camera lag of one frame
 		updateCameraDirection(&cam_view_target, dtime);
 		cam_view.camera_yaw += (cam_view_target.camera_yaw -
@@ -2074,15 +2088,8 @@ void Game::processUserInput(f32 dtime)
 		gui_chat_console->closeConsoleAtOnce();
 	}
 
-	// Input handler step() (used by the random input generator)
+	// Input handler step() (used by the random input generator and dumb handler)
 	input->step(dtime);
-
-	if(recorder) {
-		// need to get input state before key input is processed
-		// because calls to wasKeyDown reset the isKeyDown state
-		pb_objects::Action inputState = input->getLastAction();
-		recorder->setAction(inputState);
-	}
 
 #ifdef __ANDROID__
 	auto formspec = m_game_ui->getFormspecGUI();

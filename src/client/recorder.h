@@ -30,7 +30,9 @@ public:
 	Recorder(){};
 	void setAction(pb_objects::Action & action);
 	void setImage(pb_objects::Image & img);
-    void sendDataOut(bool isMenuActive, irr::video::IImage* cursorImage, Client *client, InputHandler *input);
+	void setReward(float & reward);
+	void setTerminal(bool & terminal);
+    void sendObservation();
 
     zmqpp::socket *sender = nullptr;
 
@@ -38,4 +40,6 @@ private:
     zmqpp::context context;
 	pb_objects::Action actionToSend;
 	pb_objects::Image imgToSend;
+	float rewardToSend;
+	bool terminalToSend;
 };

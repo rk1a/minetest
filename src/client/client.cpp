@@ -893,26 +893,47 @@ void Client::ReceiveAll()
 	NetworkPacket pkt;
 	u64 start_ms = porting::getTimeMs();
 	const u64 budget = 100;
+	int packet_count = 0;
 	for(;;) {
 		// Limit time even if there would be huge amounts of data to
 		// process
 		if (porting::getTimeMs() > start_ms + budget) {
-			infostream << "Client::ReceiveAll(): "
+			warningstream << "Client::ReceiveAll(): "
 					"Packet processing budget exceeded." << std::endl;
 			break;
 		}
 
 		pkt.clear();
 		try {
-			if (!m_con->TryReceive(&pkt))
+			if (!m_con->TryReceive(&pkt)) {
 				break;
+			}
 			ProcessData(&pkt);
+			packet_count += 1;
 		} catch (const con::InvalidIncomingDataException &e) {
 			infostream << "Client::ReceiveAll(): "
 					"InvalidIncomingDataException: what()="
 					 << e.what() << std::endl;
 		}
 	}
+
+	// Get current time
+	auto now = std::chrono::high_resolution_clock::now();
+
+	// Convert to a time_t object
+	auto now_c = std::chrono::high_resolution_clock::to_time_t(now);
+
+	// Convert to local time
+	std::tm* now_tm = std::localtime(&now_c);
+
+	// Get the remaining fractional seconds (nanoseconds)
+	auto nanos = std::chrono::duration_cast<std::chrono::nanoseconds>(now.time_since_epoch() % std::chrono::seconds(1)).count();
+
+	// Format the time as a string
+	std::stringstream ss;
+	ss << std::put_time(now_tm, "%Y-%m-%d %H:%M:%S") << "." << std::setfill('0') << std::setw(9) << nanos;
+	std::string timestamp = ss.str();
+	warningstream << "[Client] Processed " << packet_count << " packets |" << timestamp << std::endl;
 }
 
 inline void Client::handleCommand(NetworkPacket* pkt)
@@ -957,6 +978,7 @@ void Client::ProcessData(NetworkPacket *pkt)
 	 * as a byte mask
 	 */
 	if(toClientCommandTable[command].state == TOCLIENT_STATE_NOT_CONNECTED) {
+		warningstream << "[Client] m_server_ser_ser not set yet" << std::endl;
 		handleCommand(pkt);
 		return;
 	}
@@ -971,7 +993,6 @@ void Client::ProcessData(NetworkPacket *pkt)
 	/*
 	  Handle runtime commands
 	*/
-
 	handleCommand(pkt);
 }
 
@@ -1909,6 +1930,24 @@ float Client::getReward() {
         		errorstream << "`REWARD' should be a number!" << std::endl;
 			// convert to number
 			reward = (float)lua_tonumber(L, lua_gettop(L));
+
+			// Get current time
+			auto now = std::chrono::high_resolution_clock::now();
+
+			// Convert to a time_t object
+			auto now_c = std::chrono::high_resolution_clock::to_time_t(now);
+
+			// Convert to local time
+			std::tm* now_tm = std::localtime(&now_c);
+
+			// Get the remaining fractional seconds (nanoseconds)
+			auto nanos = std::chrono::duration_cast<std::chrono::nanoseconds>(now.time_since_epoch() % std::chrono::seconds(1)).count();
+
+			// Format the time as a string
+			std::stringstream ss;
+			ss << std::put_time(now_tm, "%Y-%m-%d %H:%M:%S") << "." << std::setfill('0') << std::setw(9) << nanos;
+			std::string timestamp = ss.str();
+			warningstream << "[Client] Reading out REWARD = " << std::to_string(reward) << "| " << timestamp <<  std::endl;
 			lua_pop(L, 1); // remove REWARD value from stack
 			// reset global REWARD to zero
 			lua_pushnumber(L, 0.); // push zero to the stack
@@ -1944,7 +1983,7 @@ bool Client::getTerminal() {
     return terminal;
 }
 
-pb_objects::Image Client::getSendableData(core::position2di cursorPosition, bool isMenuActive, irr::video::IImage* cursorImage) {
+pb_objects::Image Client::getPixelData(core::position2di cursorPosition, bool isMenuActive, irr::video::IImage* cursorImage) {
 	irr::video::IVideoDriver *driver = m_rendering_engine->get_video_driver();
 	irr::video::IImage* raw_image;
 	if(m_rendering_engine->headless) {
