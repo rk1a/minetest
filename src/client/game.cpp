@@ -1203,6 +1203,21 @@ bool Game::startup(bool *kill,
 				errorstream << "ZeroMQ error: " << e.what() << " (address: " << start_data.client_address << ")\n";
 				throw e;
 			};
+
+			if (start_data.sync_port != "") {
+				// synchronize with the server (and other clients)
+				// via a REQ/REP pattern
+				zmqpp::socket_type sync_socket_type = zmqpp::socket_type::request;
+				std::string sync_address = "tcp://" + start_data.address + ":" + start_data.sync_port;
+				sync_socket = new zmqpp::socket(sync_context, sync_socket_type);
+				warningstream << "Try to connect to server address: " << sync_address << std::endl;
+				try {
+					sync_socket->connect(sync_address);
+				} catch (zmqpp::zmq_internal_exception &e) {
+					errorstream << "ZeroMQ error: " << e.what() << " (address: " << sync_address << ")\n";
+					throw e;
+				};
+			}
 		}
 		
 		// pass socket to dumb handler and recorder
@@ -1252,6 +1267,7 @@ void Game::run()
 	irr::core::dimension2d<u32> previous_screen_size(g_settings->getU16("screen_w"),
 		g_settings->getU16("screen_h"));
 
+	bool disconnecting = false;
 	while (m_rendering_engine->run()
 			&& !(*kill || g_gamecallback->shutdown_requested
 			|| (server && server->isShutdownRequested()))) {
@@ -1261,8 +1277,12 @@ void Game::run()
 		if (sync_socket != nullptr) {
 			// send client is done signal to server
 			zmqpp::message syncDoneMsg;
-			syncDoneMsg << "done";
+			syncDoneMsg << !disconnecting;
 			sync_socket->send(syncDoneMsg);
+			// make sure to first tell the server that we are disconnecting
+			// before breaking out of the game loop
+			if (disconnecting)
+				break;
 			// wait for server signal to update
 			zmqpp::message serverSyncMsg;
 			bool msgReceived = sync_socket->receive(serverSyncMsg);
@@ -1316,9 +1336,9 @@ void Game::run()
 		updateInteractTimers(dtime);
 
 		if (!checkConnection())
-			break;
+			disconnecting = true;
 		if (!handleCallbacks())
-			break;
+			disconnecting = true;
 
 		processQueues();
 

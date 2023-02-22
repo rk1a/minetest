@@ -1,7 +1,10 @@
+-- task settings
+TREECHOP_GOAL = minetest.settings:get("treechop_goal") or 10
+
 minetest.register_on_dignode(function(pos, node, digger)
    if string.find(node["name"], "tree") then
-        REWARD[digger:get_player_name()] = 1.0
         minetest.debug("Dug a tree!")
+        REWARD[digger:get_player_name()] = 1.0
     end
 
    -- count the number of tree items of digging player

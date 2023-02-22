@@ -396,12 +396,11 @@ public:
 	// ZMQ Objects
 	zmqpp::context sync_context;
 	zmqpp::socket* sync_socket = nullptr;
+	std::string m_sync_port = "";
 
 	// RL framework
-	float getReward(std::string playername);
-	float getRewardField(lua_State *L, const char* key);
-	bool getTerminal(std::string playername);
-	bool getTerminalField(lua_State *L, const char* key);
+	float getReward(const std::string & playername);
+	bool getTerminal(const std::string & playername);
 private:
 	friend class EmergeThread;
 	friend class RemoteClient;
@@ -551,6 +550,7 @@ private:
 	// When called, environment mutex should be locked
 	std::string getPlayerName(session_t peer_id);
 	PlayerSAO *getPlayerSAO(session_t peer_id);
+	void saveMap(float dtime);
 
 	/*
 		Get a player from memory or creates one.

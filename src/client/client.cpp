@@ -916,7 +916,7 @@ void Client::ReceiveAll()
 					 << e.what() << std::endl;
 		}
 	}
-
+	/*
 	// Get current time
 	auto now = std::chrono::high_resolution_clock::now();
 
@@ -934,6 +934,7 @@ void Client::ReceiveAll()
 	ss << std::put_time(now_tm, "%Y-%m-%d %H:%M:%S") << "." << std::setfill('0') << std::setw(9) << nanos;
 	std::string timestamp = ss.str();
 	warningstream << "[Client] Processed " << packet_count << " packets |" << timestamp << std::endl;
+	*/
 }
 
 inline void Client::handleCommand(NetworkPacket* pkt)

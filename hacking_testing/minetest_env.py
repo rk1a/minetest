@@ -95,6 +95,7 @@ def start_minetest_server(
     world_dir: str = "newworld",
     sync_port: int = None,
     sync_dtime: float = 0.001,
+    game_id: str = "minetest",
 ):
     cmd = [
         minetest_path,
@@ -102,7 +103,7 @@ def start_minetest_server(
         "--world",
         world_dir,
         "--gameid",
-        "minetest",
+        game_id,
         "--config",
         config_path,
         "--port",
@@ -183,6 +184,7 @@ class Minetest(gym.Env):
         fov: int = 72,
         seed: Optional[int] = None,
         start_minetest: bool = True,
+        game_id: str = "minetest",
         clientmods: List[str] = [],
         servermods: List[str] = [],
         config_dict: Dict[str, Any] = {},
@@ -279,7 +281,8 @@ class Minetest(gym.Env):
             level=logging.DEBUG,
         )
 
-        # Configure mods
+        # Configure game and mods
+        self.game_id = game_id
         self.clientmods = clientmods
         self.servermods = servermods
         if self.sync_port:
@@ -364,6 +367,7 @@ class Minetest(gym.Env):
             self.world_dir,
             self.sync_port,
             self.sync_dtime,
+            self.game_id,
         )
 
         # (Re)start Minetest client
@@ -412,6 +416,7 @@ class Minetest(gym.Env):
     def _write_config(self):
         with open(self.config_path, "w") as config_file:
             # Update default settings
+            # TODO load these values from custom minetest config
             config_file.write("mute_sound = true\n")
             config_file.write("show_debug = false\n")
             config_file.write("enable_client_modding = true\n")
@@ -424,7 +429,12 @@ class Minetest(gym.Env):
             config_file.write("abm_interval = 0.1\n")
             config_file.write("active_block_mgmt_interval = 4.0\n")
             config_file.write("server_unload_unused_data_timeout = 1000000\n")
+            config_file.write("client_unload_unused_data_timeout = 1000000\n")
             config_file.write("debug_log_level = verbose\n")
+            config_file.write("full_block_send_enable_min_time_from_building = 0.\n")
+            config_file.write("cache_block_before_spawn = true\n")
+            config_file.write("max_block_send_distance = 100\n")
+            config_file.write("max_block_generate_distance = 100\n")
 
             # Set display size
             config_file.write(f"screen_w = {self.display_size[0]}\n")
@@ -441,6 +451,7 @@ class Minetest(gym.Env):
                 config_file.write(f"fixed_map_seed = {self.seed}\n")
 
             # Set from custom config dict
+            # TODO enable overwriting of default settings
             for key, value in self.config_dict.items():
                 config_file.write(f"{key} = {value}\n")
 

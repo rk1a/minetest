@@ -71,6 +71,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "database/database-dummy.h"
 #include "gameparams.h"
 #include <zmqpp/zmqpp.hpp>
+#include "script/common/c_converter.h"
 
 class ClientNotFoundException : public BaseException
 {
@@ -249,33 +250,22 @@ Server::Server(
 	m_itemdef(createItemDefManager()),
 	m_nodedef(createNodeDefManager()),
 	m_craftdef(createCraftDefManager()),
-	m_thread(new ServerThread(this)),
 	m_clients(m_con),
 	m_admin_chat(iface),
 	m_on_shutdown_errmsg(on_shutdown_errmsg),
 	m_modchannel_mgr(new ModChannelMgr()),
-	m_sync_dtime(sync_dtime)
+	m_sync_dtime(sync_dtime),
+	m_sync_port(sync_port)
 {
+
+	if (m_sync_port == "") {
+		m_thread = new ServerThread(this);
+	}
 	if (m_path_world.empty())
 		throw ServerError("Supplied empty world path");
 
 	if (!gamespec.isValid())
 		throw ServerError("Supplied invalid gamespec");
-	
-	// This socket is used to sync with the connected client(s)
-	if (sync_port != "") {
-		std::string sync_address = "tcp://" + bind_addr.serializeString() + ":" + sync_port;
-		zmqpp::socket_type socket_type = zmqpp::socket_type::reply;
-		sync_socket = new zmqpp::socket(sync_context, socket_type);
-		std::cout << "Try to bind to: " << sync_address << std::endl;
-		try {
-			sync_socket->bind(sync_address);
-		} catch (zmqpp::zmq_internal_exception &e) {
-			errorstream << "ZeroMQ error: " << e.what() << " (address: " << sync_address << ")\n";
-			throw e;
-		};
-	}
-
 #if USE_PROMETHEUS
 	m_metrics_backend = std::unique_ptr<MetricsBackend>(createPrometheusMetricsBackend());
 #else
@@ -549,13 +539,14 @@ void Server::start()
 			<< "..." << std::endl;
 
 	// Stop thread if already running
-	m_thread->stop();
+	if (m_thread)
+		m_thread->stop();
 
 	// Initialize connection
 	m_con->SetTimeoutMs(30);
 	m_con->Serve(m_bind_addr);
 
-	if (sync_socket == nullptr)
+	if (m_thread)
 		// Start async thread
 		m_thread->start();
 
@@ -587,7 +578,7 @@ void Server::stop()
 
 void Server::step(float dtime)
 {
-	if (sync_socket == nullptr) {
+	if (m_sync_port == "") {
 		// Limit a bit
 		if (dtime > 2.0)
 			dtime = 2.0;
@@ -612,8 +603,8 @@ void Server::step(float dtime)
 		//m_step_dtime += dtime;
 		m_step_dtime = m_sync_dtime;
 		try {
-			Receive();
 			SyncRunStep();
+			Receive();
 		} catch (con::PeerNotFoundException &e) {
 			infostream<<"Server: PeerNotFoundException"<<std::endl;
 		} catch (ClientNotFoundException &e) {
@@ -623,6 +614,26 @@ void Server::step(float dtime)
 			setAsyncFatalError(e);
 		}
 	}
+}
+
+void Server::saveMap(float dtime) {
+	MutexAutoLock lock(m_env_mutex);
+
+	ScopeProfiler sp(g_profiler, "Server: map saving (sum)");
+
+	// Save ban file
+	if (m_banmanager->isModified()) {
+		m_banmanager->save();
+	}
+
+	// Save changed parts of map
+	m_env->getMap().save(MOD_STATE_WRITE_NEEDED);
+
+	// Save players
+	m_env->saveLoadedPlayers();
+
+	// Save environment metadata
+	m_env->saveMeta();
 }
 
 void Server::SyncRunStep(bool initial_step)
@@ -1030,6 +1041,7 @@ void Server::SyncRunStep(bool initial_step)
 		Trigger emerge thread
 		Doing this every 2s is left over from old code, unclear if this is still needed.
 	*/
+	// TODO embed emerge threads into this thread in order to avoid missing chunks?
 	{
 		float &counter = m_emergethread_trigger_timer;
 		counter -= dtime;
@@ -1040,38 +1052,21 @@ void Server::SyncRunStep(bool initial_step)
 		}
 	}
 
-	// Save map, players and auth stuff
-	{
-		float &counter = m_savemap_timer;
-		counter += dtime;
-		static thread_local const float save_interval =
-			g_settings->getFloat("server_map_save_interval");
-		if (counter >= save_interval) {
-			counter = 0.0;
-			MutexAutoLock lock(m_env_mutex);
-
-			ScopeProfiler sp(g_profiler, "Server: map saving (sum)");
-
-			// Save ban file
-			if (m_banmanager->isModified()) {
-				m_banmanager->save();
-			}
-
-			// Save changed parts of map
-			m_env->getMap().save(MOD_STATE_WRITE_NEEDED);
-
-			// Save players
-			m_env->saveLoadedPlayers();
-
-			// Save environment metadata
-			m_env->saveMeta();
-		}
+	// Save map, players and auth stuff in separrate thread
+	float &counter = m_savemap_timer;
+	counter += dtime;
+	static thread_local const float save_interval =
+		g_settings->getFloat("server_map_save_interval");
+	if (counter >= save_interval) {
+		counter = 0.0;
+		std::thread saveMapThread(&Server::saveMap, this, dtime);
+		saveMapThread.detach();
 	}
 
 	m_shutdown_state.tick(dtime, this);
 
-	if (m_clients.getClientIDs().size() > 0) {
-		//warningstream << "Num connected clients " << m_clients.getClientIDs().size() << std::endl;
+	//warningstream << "Num connected clients " << m_clients.getClientIDs().size() << std::endl;
+	if (m_clients.getClientIDs().size() > 0 && sync_socket != nullptr) {
 		// Wait for client update TODO extend to multiple clients
 		zmqpp::message clientSyncMsg;
 		bool msgReceived = false;
@@ -1082,20 +1077,20 @@ void Server::SyncRunStep(bool initial_step)
 		}
 		if (!msgReceived)
 			return;
-		std::string clientMsg;
-		clientSyncMsg >> clientMsg;
-		//warningstream << "Client response: " << clientMsg << std::endl;
-
-		// Send custom dtime, reward and terminal values to client(s)
-		// TODO this thas to be adapted for multiplayer use!
-		std::string playername = m_clients.m_clients_names.at(0);
-		float reward = getReward(playername);
-		bool terminal = getTerminal(playername);
-		zmqpp::message syncMsg;
-		syncMsg << m_sync_dtime;
-		syncMsg << reward;
-		syncMsg << terminal;
-		sync_socket->send(syncMsg);
+		bool clientConnected;
+		clientSyncMsg >> clientConnected;
+		if (clientConnected) {
+			// Send custom dtime, reward and terminal values to client(s)
+			// TODO this thas to be adapted for multiplayer use!
+			std::string playername = m_clients.m_clients_names.at(0);
+			float reward = getReward(playername);
+			bool terminal = getTerminal(playername);
+			zmqpp::message syncMsg;
+			syncMsg << m_sync_dtime;
+			syncMsg << reward;
+			syncMsg << terminal;
+			sync_socket->send(syncMsg);
+		}
 	}
 }
 
@@ -1842,10 +1837,30 @@ void Server::handlePeerChanges()
 		{
 		case con::PEER_ADDED:
 			m_clients.CreateClient(c.peer_id);
+			// This socket is used to sync with the connected client
+			if (m_sync_port != "") {
+				std::string sync_address = "tcp://" + m_bind_addr.serializeString() + ":" + m_sync_port;
+				zmqpp::socket_type socket_type = zmqpp::socket_type::reply;
+				sync_socket = new zmqpp::socket(sync_context, socket_type);
+				sync_socket->set(zmqpp::socket_option::receive_timeout, 1000);
+				std::cout << "Try to bind to: " << sync_address << std::endl;
+				try {
+					sync_socket->bind(sync_address);
+				} catch (zmqpp::zmq_internal_exception &e) {
+					errorstream << "ZeroMQ error: " << e.what() << " (address: " << sync_address << ")\n";
+					throw e;
+				};
+			}
 			break;
 
 		case con::PEER_REMOVED:
 			DeleteClient(c.peer_id, c.timeout?CDR_TIMEOUT:CDR_LEAVE);
+			if (sync_socket) {
+				// sync socket not anymore
+				sync_socket->close();
+				delete sync_socket;
+				sync_socket = nullptr;
+			}
 			break;
 
 		default:
@@ -4419,7 +4434,7 @@ void dedicated_server_loop(Server &server, bool &kill)
 	 * provides a way to main.cpp to kill the server externally (bool &kill).
 	 */
 
-	if (server.sync_socket) {
+	if (server.m_sync_port != "") {
 		try {
 			server.SyncRunStep(true);
 		} catch (con::ConnectionBindFailed &e) {
@@ -4653,65 +4668,20 @@ bool Server::migrateModStorageDatabase(const GameParams &game_params, const Sett
 	return succeeded;
 }
 
-static void stackDump (lua_State *L) {
-      int i;
-      int top = lua_gettop(L);
-      for (i = 1; i <= top; i++) {  /* repeat for each level */
-        int t = lua_type(L, i);
-        switch (t) {
-    
-          case LUA_TSTRING:  /* strings */
-            printf("`%s'", lua_tostring(L, i));
-            break;
-    
-          case LUA_TBOOLEAN:  /* booleans */
-            printf(lua_toboolean(L, i) ? "true" : "false");
-            break;
-    
-          case LUA_TNUMBER:  /* numbers */
-            printf("%g", lua_tonumber(L, i));
-            break;
-    
-          default:  /* other values */
-            printf("%s", lua_typename(L, t));
-            break;
-    
-        }
-        printf("  ");  /* put a separator */
-      }
-      printf("\n");  /* end the listing */
-    }
 
-/* assume that REWARD table is on the stack top */
-float Server::getRewardField(lua_State *L, const char *key) {
-	float reward = 0.;
-	lua_pushstring(L, key);
-	lua_gettable(L, -2);  /* get REWARD[key] */
-	if (!lua_isnumber(L, -1)) {
-		errorstream << std::string("`REWARD[" + std::string(key) + "]' should be a number!").c_str() << std::endl;
-	} else {
-		reward = (float)lua_tonumber(L, lua_gettop(L));
-	}
-	lua_pop(L, 1);  /* remove number */
-	return reward;
-}
-
-float Server::getReward(std::string playername) {
+float Server::getReward(const std::string & playername) {
 	float reward = 0.0;
 	try {
 		if(m_script) {
 			lua_State *L = m_script->getStack();
 			// read out global REWARD variable
 			lua_getglobal(L, "REWARD"); // push global REWARD value to stack
-			if (!lua_istable(L, -1))
-				FATAL_ERROR("`REWARD' is not a table");
-			// Get reward of player
-			reward = getRewardField(L, playername.c_str());
-			// reset global REWARD to zero
-			lua_pushstring(L, playername.c_str()); // push playername to stack
-			lua_pushnumber(L, 0.); // push zero to the stack
-			lua_settable(L, -3); // REWARD[playername] = zero + pop playername and zero
-			//lua_setglobal(L, "REWARD"); // pop zero and assign to REWARD
+			if (lua_istable(L, 1)) {
+				// get reward value of this player
+				getfloatfield(L, 1, playername.c_str(), reward);
+			}
+			// reset reward value to zero
+			setfloatfield(L, 1, playername.c_str(), 0.);
 			lua_pop(L, 1); // remove REWARD table from stack
 		}
 	} catch(LuaError &e) {
@@ -4721,32 +4691,21 @@ float Server::getReward(std::string playername) {
     return reward;
 }
 
-/* assume that TERMINAL table is on the stack top */
-bool Server::getTerminalField(lua_State *L, const char *key) {
-	bool terminal = false;
-	lua_pushstring(L, key);
-	lua_gettable(L, -2);  /* get TERMINAL[key] */
-	if (!lua_isboolean(L, -1)) {
-		errorstream << std::string("`TERMINAL[" + std::string(key) + "]' should be a boolean!").c_str() << std::endl;
-	} else {
-		terminal = (bool)lua_toboolean(L, lua_gettop(L));
-	}
-	lua_pop(L, 1);  /* remove bool */
-	return terminal;
-}
 
-bool Server::getTerminal(std::string playername) {
+bool Server::getTerminal(const std::string & playername) {
 	bool terminal = false;
 	try {
 		if(m_script) {
 			lua_State *L = m_script->getStack();
 			// get global TERMINAL variable and push on stack
 			lua_getglobal(L, "TERMINAL");
-			if (!lua_istable(L, -1))
-				FATAL_ERROR("`TERMINAL' is not a table");
-			// get terminal value of player
-			terminal = getTerminalField(L, playername.c_str());
-			// remove from stack
+			if (lua_istable(L, 1)) {
+				// get terminal value of this player
+				getboolfield(L, 1, playername.c_str(), terminal);
+			}
+			// reset terminalvalue to zero
+			setboolfield(L, 1, playername.c_str(), false);
+ 			// remove TERMINAL table from stack
 			lua_pop(L, 1);
 		}
 	} catch(LuaError &e) {
