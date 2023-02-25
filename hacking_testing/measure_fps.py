@@ -10,6 +10,7 @@ render = False
 sync = True
 sync_port = 30010
 sync_dtime = 0.05
+undersampling = 1
 
 env = Minetest(
     seed=42,
@@ -17,6 +18,7 @@ env = Minetest(
     xvfb_headless=headless,
     sync_port=sync_port,
     sync_dtime=sync_dtime,
+    config_dict=dict(undersampling=undersampling),
 )
 
 obs = env.reset()
@@ -58,7 +60,7 @@ plt.xlabel("time [s]")
 plt.ylabel("FPS")
 plt.legend()
 if sync:
-    plt.savefig(f"fps_testloop_sync_{'headless_' if headless else ''}dt{sync_dtime}.png")
+    plt.savefig(f"fps_testloop_sync_{'headless_' if headless else ''}.png")
 else:
     plt.savefig(f"fps_testloop_async_{'headless' if headless else ''}.png")
 plt.show()

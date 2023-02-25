@@ -1041,14 +1041,19 @@ void Server::SyncRunStep(bool initial_step)
 		Trigger emerge thread
 		Doing this every 2s is left over from old code, unclear if this is still needed.
 	*/
-	// TODO embed emerge threads into this thread in order to avoid missing chunks?
 	{
 		float &counter = m_emergethread_trigger_timer;
-		counter -= dtime;
+		// only start emerge threads once
+		if (initial_step)
+			counter -= dtime;
 		if (counter <= 0.0f) {
 			counter = 2.0f;
 
 			m_emerge->startThreads();
+			// TODO join emerge threads into this thread
+			// in order to avoid missing chunks?
+			//sleep_ms((int)(100.0));
+			//m_emerge->stopThreads();
 		}
 	}
 

@@ -432,9 +432,12 @@ class Minetest(gym.Env):
             config_file.write("client_unload_unused_data_timeout = 1000000\n")
             config_file.write("debug_log_level = verbose\n")
             config_file.write("full_block_send_enable_min_time_from_building = 0.\n")
-            config_file.write("cache_block_before_spawn = true\n")
             config_file.write("max_block_send_distance = 100\n")
             config_file.write("max_block_generate_distance = 100\n")
+            config_file.write("num_emerge_threads = 0\n")
+            config_file.write("emergequeue_limit_total = 1000000\n")
+            config_file.write("emergequeue_limit_diskonly = 1000000\n")
+            config_file.write("emergequeue_limit_generate = 1000000\n")
 
             # Set display size
             config_file.write(f"screen_w = {self.display_size[0]}\n")
