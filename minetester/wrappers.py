@@ -2,8 +2,8 @@ from typing import Dict, List, Set, Union
 
 import gym
 import numpy as np
-from minetests.minetest_env import Minetest
-from minetests.utils import KEY_MAP, NOOP_ACTION
+from minetester.minetest_env import Minetest
+from minetester.utils import KEY_MAP, NOOP_ACTION
 
 
 class FlattenMultiDiscreteActions(gym.Wrapper):
@@ -185,6 +185,7 @@ class DiscreteMouseAction(gym.Wrapper):
 
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
+    from minetester.minetest_env import Minetest
 
     env = Minetest(seed=1)
 
