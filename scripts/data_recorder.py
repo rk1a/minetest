@@ -1,7 +1,7 @@
 import os
 
 import zmq
-from minetests.utils import unpack_pb_obs
+from minetester.utils import unpack_pb_obs
 
 
 class DataRecorder:

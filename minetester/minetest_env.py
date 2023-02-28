@@ -11,8 +11,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import psutil
 import zmq
-from minetests.utils import (KEY_MAP, pack_pb_action, start_minetest_client,
-                             start_minetest_server, unpack_pb_obs)
+from minetester.utils import (KEY_MAP, pack_pb_action, start_minetest_client,
+                              start_minetest_server, unpack_pb_obs)
 
 
 class Minetest(gym.Env):
@@ -323,13 +323,6 @@ class Minetest(gym.Env):
         return next_obs, rew, done, info
 
     def render(self, render_mode: str = "human"):
-        if render_mode is None:
-            gym.logger.warn(
-                "You are calling render method without specifying any render mode. "
-                "You can specify the render_mode at initialization, "
-                f'e.g. gym("{self.spec.id}", render_mode="rgb_array")',
-            )
-            return
         if render_mode == "human":
             if self.render_img is None:
                 # Setup figure
@@ -349,6 +342,12 @@ class Minetest(gym.Env):
             plt.draw(), plt.pause(1e-3)
         elif render_mode == "rgb_array":
             return self.last_obs
+        else:
+            raise NotImplementedError(
+                "You are calling 'render()' with an unsupported"
+                f" render mode: '{render_mode}'. "
+                f"Supported modes: {self.metadata['render.modes']}"
+            )
 
     def close(self):
         if self.render_fig is not None:

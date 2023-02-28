@@ -2,8 +2,8 @@ import subprocess
 from typing import Any, Dict
 
 import numpy as np
-from minetests.proto import objects_pb2 as pb_objects
-from minetests.proto.objects_pb2 import KeyType
+from minetester.proto import objects_pb2 as pb_objects
+from minetester.proto.objects_pb2 import KeyType
 
 # Define default keys / buttons
 KEY_MAP = {

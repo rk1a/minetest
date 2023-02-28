@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from minetests.minetest_env import Minetest
+from minetester import Minetest
 
 env = Minetest(
     seed=42,

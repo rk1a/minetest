@@ -1,16 +1,18 @@
 from setuptools import setup
 
 setup(
-    name='Minetests',
+    name='Minetester',
     version='0.0.1',
     description='Complex environments based on Minetest.',
     author='EleutherAI',
     author_email='',
-    packages=['minetests'],
+    packages=['minetester'],
     install_requires=[
         'gym',
         'numpy',
         'matplotlib',
         'zmq',
+        'protobuf>=4.22.0',
+        'psutil',
     ],
 )
