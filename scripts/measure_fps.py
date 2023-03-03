@@ -3,7 +3,7 @@ import time
 
 import matplotlib.pyplot as plt
 import numpy as np
-from minetest_env import Minetest
+from minetester.minetest_env import Minetest
 
 headless = True
 render = False
