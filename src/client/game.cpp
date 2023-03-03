@@ -1541,7 +1541,7 @@ bool Game::createSingleplayerServer(const std::string &map_dir,
 	}
 
 	server = new Server(map_dir, gamespec, simple_singleplayer_mode, bind_addr,
-			false, nullptr, error_message);
+			false, nullptr, error_message, "", 0.0f);
 	server->start();
 
 	return true;

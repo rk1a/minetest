@@ -151,7 +151,7 @@ public:
 		bool dedicated,
 		ChatInterface *iface = nullptr,
 		std::string *on_shutdown_errmsg = nullptr,
-		const std::string &sync_port = nullptr,
+		const std::string &sync_port = "",
 		const float &sync_dtime = 0.0f
 	);
 	~Server();
