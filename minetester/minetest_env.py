@@ -260,19 +260,19 @@ class Minetest(gym.Env):
             config_file.write(f"fov = {self.fov_y}\n")
 
             # Seed the map generator
-            if self.seed:
-                config_file.write(f"fixed_map_seed = {self.seed}\n")
+            if self.the_seed:
+                config_file.write(f"fixed_map_seed = {self.the_seed}\n")
 
             # Set from custom config dict
             for key, value in self.config_dict.items():
                 config_file.write(f"{key} = {value}\n")
 
     def seed(self, seed: int):
-        self.seed = seed
+        self.the_seed = seed
 
         # Create UUID from seed
         rnd = random.Random()
-        rnd.seed(self.seed)
+        rnd.seed(self.the_seed)
         self.unique_env_id = str(uuid.UUID(int=rnd.getrandbits(128), version=4))
 
         # If not set manually, world and config paths are based on UUID
