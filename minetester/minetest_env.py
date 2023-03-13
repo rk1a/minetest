@@ -12,7 +12,7 @@ import numpy as np
 import psutil
 import zmq
 from minetester.utils import (KEY_MAP, pack_pb_action, start_minetest_client,
-                              start_minetest_server, unpack_pb_obs)
+                              start_minetest_server, unpack_pb_obs, start_xserver)
 
 
 class Minetest(gym.Env):
@@ -34,13 +34,18 @@ class Minetest(gym.Env):
         clientmods: List[str] = [],
         servermods: List[str] = [],
         config_dict: Dict[str, Any] = {},
-        xvfb_headless: bool = False,
+        headless: bool = False,
+        start_xvfb: bool = False,
+        x_display: Optional[int] = None,
     ):
+        self.unique_env_id = str(uuid.uuid4())
+
         # Graphics settings
-        self.xvfb_headless = xvfb_headless
+        self.headless = headless
         self.display_size = display_size
         self.fov_y = fov
         self.fov_x = self.fov_y * self.display_size[0] / self.display_size[1]
+
         # Define action and observation space
         self.max_mouse_move_x = self.display_size[0]
         self.max_mouse_move_y = self.display_size[1]
@@ -82,11 +87,14 @@ class Minetest(gym.Env):
                 "mouse_cursor_white_16x16.png",
             )
 
-        # Regenerate and clean world if no custom world provided
+        # Regenerate and clean world and config if no custom ones provided
         self.reset_world = self.world_dir is None
-
-        # Clean config if no custom config provided
         self.clean_config = self.config_path is None
+        # If no custom world / config provided set folder / path based on UUID
+        if self.world_dir is None:
+            self.world_dir = os.path.join(self.root_dir, self.unique_env_id)
+        if self.config_path is None:
+            self.config_path = os.path.join(self.root_dir, f"{self.unique_env_id}.conf")
 
         # Whether to start minetest server and client
         self.start_minetest = start_minetest
@@ -109,7 +117,6 @@ class Minetest(gym.Env):
         self.render_img = None
 
         # Seed the environment
-        self.unique_env_id = str(uuid.uuid4())  # fallback UUID when no seed is provided
         if seed is not None:
             self.seed(seed)
 
@@ -132,6 +139,17 @@ class Minetest(gym.Env):
         # Write minetest.conf
         self.config_dict = config_dict
         self._write_config()
+
+        # Start X server virtual frame buffer
+        self.default_display = x_display or 0
+        if "DISPLAY" in os.environ:
+            self.default_display = int(os.environ["DISPLAY"].split(":")[1])
+        self.x_display = x_display or self.default_display
+        self.start_xvfb = start_xvfb and self.headless
+        self.xserver_process = None
+        if self.start_xvfb:
+            self.x_display = x_display or self.default_display + 4
+            self.xserver_process = start_xserver(self.x_display, self.display_size)
 
     def _enable_clientmods(self):
         clientmods_folder = os.path.realpath(
@@ -159,7 +177,6 @@ class Minetest(gym.Env):
         if not os.path.exists(servermods_folder):
             raise RuntimeError(f"Server mods must be located at {servermods_folder}!")
         # Create world_dir/worldmods folder
-        self._check_world_dir()
         worldmods_folder = os.path.join(self.world_dir, "worldmods")
         os.makedirs(worldmods_folder, exist_ok=True)
         # Copy server mods to world_dir/worldmods
@@ -189,10 +206,13 @@ class Minetest(gym.Env):
             f"{{}}_{reset_timestamp}_{self.unique_env_id}.log",
         )
 
-        # (Re)start Minetest server
+        # Close Mintest processes
         if self.server_process:
             self.server_process.kill()
+        if self.client_process:
+            self.client_process.kill()
 
+        # (Re)start Minetest server
         self.server_process = start_minetest_server(
             self.minetest_executable,
             self.config_path,
@@ -202,13 +222,7 @@ class Minetest(gym.Env):
         )
 
         # (Re)start Minetest client
-        if self.client_process:
-            self.client_process.kill()
-            if self.xvfb_headless:
-                # kill running xvfb processes
-                for proc in psutil.process_iter():
-                    if proc.name() in ["Xvfb"]:
-                        proc.kill()
+        os.environ["DISPLAY"] = f":{self.x_display}"
         self.client_process = start_minetest_client(
             self.minetest_executable,
             self.config_path,
@@ -216,30 +230,15 @@ class Minetest(gym.Env):
             self.env_port,
             self.server_port,
             self.cursor_image_path,
-            xvfb_headless=self.xvfb_headless,
+            headless=self.headless,
         )
-    
-    def _check_world_dir(self):
-        if self.world_dir is None:
-            raise RuntimeError(
-                "World directory was not set. Please, provide a world directory "
-                "in the constructor or seed the environment!",
-            )
+        os.environ["DISPLAY"] = f":{self.default_display}"
 
     def _delete_world(self):
-        self._check_world_dir()
         if os.path.exists(self.world_dir):
             shutil.rmtree(self.world_dir)
-    
-    def _check_config_path(self):
-        if self.config_path is None:
-            raise RuntimeError(
-                "Minetest config path was not set. Please, provide a config path "
-                "in the constructor or seed the environment!",
-            )
 
     def _delete_config(self):
-        self._check_config_path()
         if os.path.exists(self.config_path):
             os.remove(self.config_path)
 
@@ -269,17 +268,6 @@ class Minetest(gym.Env):
 
     def seed(self, seed: int):
         self.the_seed = seed
-
-        # Create UUID from seed
-        rnd = random.Random()
-        rnd.seed(self.the_seed)
-        self.unique_env_id = str(uuid.UUID(int=rnd.getrandbits(128), version=4))
-
-        # If not set manually, world and config paths are based on UUID
-        if self.world_dir is None:
-            self.world_dir = os.path.join(self.root_dir, self.unique_env_id)
-        if self.config_path is None:
-            self.config_path = os.path.join(self.root_dir, f"{self.unique_env_id}.conf")
 
     def reset(self):
         if self.start_minetest:
@@ -360,11 +348,8 @@ class Minetest(gym.Env):
             self.client_process.kill()
         if self.server_process is not None:
             self.server_process.kill()
-        if self.xvfb_headless:
-            # kill remaining xvfb and minetest processes
-            for proc in psutil.process_iter():
-                if proc.name() in ["Xvfb", "minetest"]:
-                    proc.kill()
+        if self.xserver_process is not None:
+            self.xserver_process.terminate()
         if self.reset_world:
             self._delete_world()
         if self.clean_config:
