@@ -4,7 +4,8 @@ from minetester import Minetest
 env = Minetest(
     seed=42,
     start_minetest=True,
-    xvfb_headless=True,
+    headless=True,
+    start_xvfb=True,
     clientmods=["random_v0"],
 )
 
