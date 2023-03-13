@@ -34,7 +34,7 @@ if __name__ == "__main__":
     # Env settings
     seed = 42
     max_steps = 100
-    x_display = 2
+    x_display = 4
     env_kwargs = {
         "display_size": (600, 400),
         "fov": 72,

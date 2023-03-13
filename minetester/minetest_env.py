@@ -148,7 +148,7 @@ class Minetest(gym.Env):
         self.start_xvfb = start_xvfb and self.headless
         self.xserver_process = None
         if self.start_xvfb:
-            self.x_display = x_display or self.default_display + 2
+            self.x_display = x_display or self.default_display + 4
             self.xserver_process = start_xserver(self.x_display, self.display_size)
 
     def _enable_clientmods(self):

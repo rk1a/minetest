@@ -16,7 +16,6 @@ while not done:
     try:
         action = env.action_space.sample()
         obs, rew, done, info = env.step(action)
-        print(obs.shape)
         if render:
             env.render()
     except KeyboardInterrupt:
