@@ -83,6 +83,9 @@ def start_minetest_server(
     log_path: str = "log/{}.log",
     server_port: int = 30000,
     world_dir: str = "newworld",
+    sync_port: int = None,
+    sync_dtime: float = 0.001,
+    game_id: str = "minetest",
 ):
     cmd = [
         minetest_path,
@@ -90,12 +93,15 @@ def start_minetest_server(
         "--world",
         world_dir,
         "--gameid",
-        "minetest",  # TODO does this have to be unique?
+        game_id,
         "--config",
         config_path,
         "--port",
         str(server_port),
     ]
+    if sync_port:
+        cmd.extend(["--sync-port", str(sync_port)])
+        cmd.extend(["--sync-dtime", str(sync_dtime)])
     stdout_file = log_path.format("server_stdout")
     stderr_file = log_path.format("server_stderr")
     with open(stdout_file, "w") as out, open(stderr_file, "w") as err:
@@ -112,6 +118,7 @@ def start_minetest_client(
     cursor_img: str = "cursors/mouse_cursor_white_16x16.png",
     client_name: str = "MinetestAgent",
     xvfb_headless: bool = False,
+    sync_port: int = None,
 ):
     cmd = [
         minetest_path,
@@ -140,6 +147,8 @@ def start_minetest_client(
         cmd.append("--headless")
     if cursor_img:
         cmd.extend(["--cursor-image", cursor_img])
+    if sync_port:
+        cmd.extend(["--sync-port", str(sync_port)])
 
     stdout_file = log_path.format("client_stdout")
     stderr_file = log_path.format("client_stderr")
