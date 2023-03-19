@@ -1229,14 +1229,13 @@ void Game::run()
 	irr::core::dimension2d<u32> previous_screen_size(g_settings->getU16("screen_w"),
 		g_settings->getU16("screen_h"));
 
-	// errorstream << "Go 1" << std::endl;
-	while (m_rendering_engine->run()
-			&& !(*kill || g_gamecallback->shutdown_requested
-			|| (server && server->isShutdownRequested()))) {
-
+	bool firstIter = true;
+	while (m_rendering_engine->run() &&
+			!(*kill || g_gamecallback->shutdown_requested ||
+					(server && server->isShutdownRequested()))) {
 		// send data out
 		std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
-		if(recorder) {
+		if(recorder && !firstIter) {
 			pb_objects::Image pb_img = client->getSendableData(input->getMousePos(), isMenuActive(), cursorImage);
 			recorder->setImage(pb_img);
 			recorder->sendDataOut(isMenuActive(), cursorImage, client, input);
@@ -1279,7 +1278,13 @@ void Game::run()
 
 
 		updateProfilers(stats, draw_times, dtime);
-		processUserInput(dtime);
+		if(recorder && !firstIter) {
+			processUserInput(dtime);
+			pb_objects::Action inputState = input->getLastAction();
+			recorder->setAction(inputState);
+		} else if(recorder == nullptr) {
+			processUserInput(dtime);
+		}
 		// Update camera before player movement to avoid camera lag of one frame
 		updateCameraDirection(&cam_view_target, dtime);
 		cam_view.camera_yaw += (cam_view_target.camera_yaw -
@@ -1316,7 +1321,7 @@ void Game::run()
 		if (m_does_lost_focus_pause_game && !device->isWindowFocused() && !isMenuActive()) {
 			showPauseMenu();
 		}
-
+		firstIter = false;
 	}
 }
 
@@ -2037,13 +2042,6 @@ void Game::processUserInput(f32 dtime)
 
 	// Input handler step() (used by the random input generator)
 	input->step(dtime);
-
-	if(recorder) {
-		// need to get input state before key input is processed
-		// because calls to wasKeyDown reset the isKeyDown state
-		pb_objects::Action inputState = input->getLastAction();
-		recorder->setAction(inputState);
-	}
 
 #ifdef __ANDROID__
 	auto formspec = m_game_ui->getFormspecGUI();

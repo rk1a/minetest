@@ -1,6 +1,6 @@
 EleutherAI Alignment Minetest
 =============================
-This is a fork of the Minetest Voxel Engine, designed to support and OAI gym like environment. The library supports 
+This is a fork of the Minetest Voxel Engine, designed to support an OAI gym like environment. The library supports 
 
 Modes of Operation
 ------------------
@@ -11,6 +11,17 @@ The model provides 4 modes of operation for players and agents
 4. Real time recording of player actions
 
 
+Minetester
+==========
+Minetester is the Python package that exposes Minetest environments via the `gym(nasium)` interface.
+After building the minetest executable you can install it with:
+```
+pip install -e .
+```
+To verify the installation run
+```
+python -m minetester.scripts.test_loop
+```
 
 Minetest
 ========
