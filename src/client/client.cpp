@@ -1836,7 +1836,6 @@ void Client::makeScreenshot()
 	if (!raw_image)
 		return;
 
-	// warningstream << "got data" << raw_image->getDimension().Width << std::endl;
 	const struct tm tm = mt_localtime();
 
 	char timetstamp_c[64];
