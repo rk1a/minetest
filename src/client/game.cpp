@@ -1186,7 +1186,7 @@ bool Game::startup(bool *kill,
 		if (start_data.isDumbClient()) {
 			dynamic_cast<DumbClientInputHandler*>(input)->socket = zmqclient;
 		}
-		if (start_data.record)  {
+		if (start_data.isRecording())  {
 			createRecorder(start_data);
 			recorder->sender = zmqclient;
 		}
@@ -1233,7 +1233,6 @@ void Game::run()
 	while (m_rendering_engine->run() &&
 			!(*kill || g_gamecallback->shutdown_requested ||
 					(server && server->isShutdownRequested()))) {
-
 		// send data out
 		std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
 		if(recorder && !firstIter) {

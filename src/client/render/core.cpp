@@ -18,6 +18,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
+#include "cmake_config.h"
 #include "core.h"
 #include "plain.h"
 #include "client/shadows/dynamicshadowsrender.h"
@@ -64,8 +65,6 @@ void RenderingCore::draw(video::SColor _skycolor, bool _show_hud, bool _show_min
 		buffer->setTexture(0, v2f(1.0f, 1.0f), "idk_lol", video::ECF_R8G8B8);
 		auto tex = new TextureBufferOutput(buffer, 0);
 		pipeline->setRenderTarget(tex);
-
-
 		pipeline->reset(context);
 		pipeline->run(context);
 

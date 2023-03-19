@@ -134,7 +134,8 @@ compile_commands.json
 .vs/
 
 # Optional user provided library folder
-lib/irrlichtmt
+# TODO: don't add irrlichtmt, apply patch from CMakeLists.txt
+# lib/irrlichtmt
 
 # Generated mod storage database
 client/mod_storage.sqlite
