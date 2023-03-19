@@ -41,8 +41,8 @@
 7. setup python 
   1. create a new python conda env or venv (tested with python3.9)
   2. pip install gym matplotlib protobuf==3.20.1 psutil zmq
-  3. cd into the hacking_testing directory and run compile_proto.sh
-  4. run hacking_testing/test_loop.py
+  3. cd into the scripts directory and run compile_proto.sh
+  4. run python -m minetester.scripts.test_loop
 
    
 
