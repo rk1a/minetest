@@ -48,6 +48,7 @@ log/*
 # Python
 **/__pycache__/
 __pycache__/
+*.egg-info
 
 newworld/
 ## Non-static Minetest directories or symlinks to these
