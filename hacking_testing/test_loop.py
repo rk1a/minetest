@@ -8,13 +8,13 @@ env = Minetest(
     clientmods=["random_v0"],
 )
 
-render = False
+render = True 
 obs = env.reset()
 done = False
 while not done:
     try:
         action = env.action_space.sample()
-        obs, rew, done, info = env.step(action)
+        obs, rew, info = env.step(action)
         if render:
             env.render()
     except KeyboardInterrupt:
