@@ -2,20 +2,19 @@
 from minetester import Minetest
 
 env = Minetest(
-    seed=42,
+    base_seed=42,
     start_minetest=True,
     headless=True,
     start_xvfb=True,
-    clientmods=["random_v0"],
 )
 
-render = True 
+render = True
 obs = env.reset()
 done = False
 while not done:
     try:
         action = env.action_space.sample()
-        obs, rew, info = env.step(action)
+        obs, rew, done, info = env.step(action)
         if render:
             env.render()
     except KeyboardInterrupt:
