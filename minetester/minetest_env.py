@@ -252,7 +252,7 @@ class Minetest(gym.Env):
 
     def _delete_world(self):
         if os.path.exists(self.world_dir):
-            shutil.rmtree(self.world_dir)
+            shutil.rmtree(self.world_dir, ignore_errors=True)
 
     def _delete_config(self):
         if os.path.exists(self.config_path):
