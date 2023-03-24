@@ -41,7 +41,7 @@ minetest.register_globalstep(function(dtime)
             player_pos,
             MAX_TREE_DISTANCE,
             -- TODO why does group:tree not work for all tree nodes?
-            {"group:tree", "default:tree", "default:acacia_tree", "default:jungle_tree"},
+            {"group:tree", "default:tree", "default:acacia_tree", "default:jungle_tree", "default:pine_tree", "default:aspen_tree"},
             true
         )
         local dist = MAX_TREE_DISTANCE 
@@ -57,6 +57,6 @@ minetest.register_on_punchnode(function(pos, node)
     -- reward punching trees
     if string.find(node["name"], "tree") then
         --minetest.debug("Punched a tree!")
-        REWARD = REWARD + 0.1
+        REWARD = REWARD + 0.01
     end
 end)
