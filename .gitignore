@@ -69,6 +69,7 @@ newworld/
 !/mods/random_v*/
 !/mods/treechop_v*/
 /worlds
+/configs
 /world/
 /clientmods/*
 !/clientmods/rewards/

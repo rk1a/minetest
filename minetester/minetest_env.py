@@ -18,6 +18,8 @@ from minetester.utils import (
     start_minetest_server,
     start_xserver,
     unpack_pb_obs,
+    read_config_file,
+    write_config_file,
 )
 
 
@@ -259,28 +261,26 @@ class Minetest(gym.Env):
             os.remove(self.config_path)
 
     def _write_config(self):
-        with open(self.config_path, "w") as config_file:
-            # Update default settings
-            config_file.write("mute_sound = true\n")
-            config_file.write("show_debug = false\n")
-            config_file.write("enable_client_modding = true\n")
-            config_file.write("csm_restriction_flags = 0\n")
-            config_file.write("enable_mod_channels = true\n")
-
-            # Set display size
-            config_file.write(f"screen_w = {self.display_size[0]}\n")
-            config_file.write(f"screen_h = {self.display_size[1]}\n")
-
-            # Set FOV
-            config_file.write(f"fov = {self.fov_y}\n")
-
-            # Seed the map generator if not using a custom map
-            if self.world_seed:
-                config_file.write(f"fixed_map_seed = {self.world_seed}\n")
-
-            # Set from custom config dict
-            for key, value in self.config_dict.items():
-                config_file.write(f"{key} = {value}\n")
+        # Base config
+        config = dict(
+            mute_sound=True,
+            show_debug=False,
+            enable_client_modding=True,
+            csm_restriction_flags=0,
+            enable_mod_channels=True,
+            screen_w=self.display_size[0],
+            screen_h=self.display_size[1],
+            fov=self.fov_y,
+        )
+        # Seed the map generator if not using a custom map
+        if self.world_seed:
+            config.update(fixed_map_seed=self.world_seed)
+        # Update config from existing config file
+        if os.path.exists(self.config_path):
+            config.update(read_config_file(self.config_path))
+        # Set from custom config dict
+        config.update(self.config_dict)
+        write_config_file(self.config_path, config)
 
     def seed(self, seed: int):
         self.rng = np.random.RandomState(seed)
