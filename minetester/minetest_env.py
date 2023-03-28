@@ -1,7 +1,6 @@
 import datetime
 import logging
 import os
-import random
 import shutil
 import uuid
 from typing import Any, Dict, List, Optional, Tuple
@@ -9,7 +8,6 @@ from typing import Any, Dict, List, Optional, Tuple
 import gym
 import matplotlib.pyplot as plt
 import numpy as np
-import psutil
 import zmq
 from minetester.utils import (
     KEY_MAP,
