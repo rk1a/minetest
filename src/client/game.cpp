@@ -1389,7 +1389,6 @@ void Game::run()
 		if (m_does_lost_focus_pause_game && !device->isWindowFocused() && !isMenuActive()) {
 			showPauseMenu();
 		}
-
 	}
 }
 

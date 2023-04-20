@@ -4,9 +4,11 @@ from minetester import Minetest
 env = Minetest(
     seed=42,
     start_minetest=True,
-    xvfb_headless=True,
     sync_port=30010,
     sync_dtime=0.05,
+    headless=True,
+    start_xvfb=True,
+    clientmods=["random_v0"],
 )
 
 render = True
