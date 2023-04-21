@@ -239,7 +239,6 @@ class Minetest(gym.Env):
         )
 
         # (Re)start Minetest client
-        os.environ["DISPLAY"] = f":{self.x_display}"
         self.client_process = start_minetest_client(
             self.minetest_executable,
             self.config_path,
@@ -249,6 +248,7 @@ class Minetest(gym.Env):
             self.cursor_image_path,
             sync_port=self.sync_port,
             headless=self.headless,
+            display=self.x_display
         )
 
     def _check_world_dir(self):

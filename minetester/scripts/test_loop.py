@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 from minetester import Minetest
+import os
 
 env = Minetest(
     seed=42,
