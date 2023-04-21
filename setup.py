@@ -12,7 +12,7 @@ setup(
         'numpy',
         'matplotlib',
         'zmq',
-        'protobuf>=4.22.0',
+        'protobuf==3.19.0',
         'psutil',
     ],
 )
