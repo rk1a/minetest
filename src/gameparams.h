@@ -48,6 +48,7 @@ struct GameStartData : GameParams
 
 	bool isSinglePlayer() const { return address.empty() && !local_server; }
 	bool isDumbClient() const { return dumb && !client_address.empty(); }
+	bool isRecording() const { return record && !client_address.empty(); }
 	bool isResizable() const { return resizable; }
 	bool isHeadless() const { return headless; }
 

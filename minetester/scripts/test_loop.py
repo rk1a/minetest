@@ -11,7 +11,7 @@ env = Minetest(
     clientmods=["random_v0"],
 )
 
-render = True
+render = True 
 obs = env.reset()
 done = False
 while not done:

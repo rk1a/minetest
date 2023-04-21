@@ -1224,7 +1224,7 @@ bool Game::startup(bool *kill,
 		if (start_data.isDumbClient()) {
 			dynamic_cast<DumbClientInputHandler*>(input)->socket = data_socket;
 		}
-		if (start_data.record)  {
+		if (start_data.isRecording())  {
 			createRecorder(start_data);
 			recorder->sender = data_socket;
 		}

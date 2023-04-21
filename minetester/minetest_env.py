@@ -280,6 +280,8 @@ class Minetest(gym.Env):
             config_file.write("mute_sound = true\n")
             config_file.write("show_debug = false\n")
             config_file.write("enable_client_modding = true\n")
+            #config_file.write("video_driver = null\n")
+            #config_file.write("enable_shaders = false\n")
             config_file.write("csm_restriction_flags = 0\n")
             config_file.write("enable_mod_channels = true\n")
             config_file.write("server_map_save_interval = 1000000\n")
