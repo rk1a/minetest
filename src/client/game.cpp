@@ -1267,6 +1267,7 @@ void Game::run()
 	irr::core::dimension2d<u32> previous_screen_size(g_settings->getU16("screen_w"),
 		g_settings->getU16("screen_h"));
 
+	bool firstIter = true;
 	bool disconnecting = false;
 	while (m_rendering_engine->run()
 			&& !(*kill || g_gamecallback->shutdown_requested
@@ -1301,7 +1302,7 @@ void Game::run()
 		
 		// send data out
 		std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
-		if(recorder) {
+		if(recorder && !firstIter) {
 			pb_objects::Image pb_img = client->getPixelData(input->getMousePos(), isMenuActive(), cursorImage);
 			recorder->setImage(pb_img);
 			recorder->setReward(reward);
@@ -1349,7 +1350,7 @@ void Game::run()
 		updateProfilers(stats, draw_times, dtime);
 		processUserInput(dtime);
 		// record action
-		if(recorder) {
+		if(recorder && !firstIter) {
 			pb_objects::Action lastAction = input->getLastAction();
 			recorder->setAction(lastAction);
 		}
@@ -1389,6 +1390,7 @@ void Game::run()
 		if (m_does_lost_focus_pause_game && !device->isWindowFocused() && !isMenuActive()) {
 			showPauseMenu();
 		}
+		firstIter = false;
 	}
 }
 
