@@ -1273,6 +1273,7 @@ void Game::run()
 			&& !(*kill || g_gamecallback->shutdown_requested
 			|| (server && server->isShutdownRequested()))) {
 		
+		
 		float reward;
 		bool terminal;
 		if (sync_socket != nullptr) {
@@ -1312,6 +1313,7 @@ void Game::run()
 		std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
 		//warningstream << "Time difference = " << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() << "[µs]" << std::endl;
 
+		
 		const irr::core::dimension2d<u32> &current_screen_size =
 			m_rendering_engine->get_video_driver()->getScreenSize();
 		// Verify if window size has changed and save it if it's the case
@@ -1348,7 +1350,10 @@ void Game::run()
 
 
 		updateProfilers(stats, draw_times, dtime);
-		processUserInput(dtime);
+		//skip if there is a recorder and it's the first iteration
+		if(!recorder || !firstIter){
+			processUserInput(dtime);
+		}
 		// record action
 		if(recorder && !firstIter) {
 			pb_objects::Action lastAction = input->getLastAction();
@@ -1374,6 +1379,7 @@ void Game::run()
 				resumeAnimation();
 		}
 
+		
 		if (!m_is_paused)
 			step(dtime);
 		processClientEvents(&cam_view_target);
