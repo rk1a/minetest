@@ -69,12 +69,14 @@ newworld/
 !/mods/random_v*/
 !/mods/treechop_v*/
 !/mods/rewards/
+!/mods/treechop_shaped_v*/
 /worlds
 /world/
 /clientmods/*
 !/clientmods/rewards/
 !/clientmods/random_v*/
 !/clientmods/treechop_v*/
+!/clientmods/treechop_shaped_v*/
 /client/mod_storage/
 
 ## Configuration/log files
