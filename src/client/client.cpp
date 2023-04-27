@@ -17,6 +17,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
+#include "cmake_config.h"
 #include <iostream>
 #include <algorithm>
 #include <sstream>
@@ -1847,6 +1848,7 @@ void Client::makeScreenshot()
 {
 	irr::video::IVideoDriver *driver = m_rendering_engine->get_video_driver();
 	irr::video::IImage* raw_image;
+	
 	if(m_rendering_engine->headless) {
 		raw_image = m_rendering_engine->get_screenshot();
 	} else {
@@ -1986,6 +1988,7 @@ bool Client::getTerminal() {
 
 pb_objects::Image Client::getPixelData(core::position2di cursorPosition, bool isMenuActive, irr::video::IImage* cursorImage) {
 	irr::video::IVideoDriver *driver = m_rendering_engine->get_video_driver();
+	
 	irr::video::IImage* raw_image;
 	if(m_rendering_engine->headless) {
 		raw_image = m_rendering_engine->get_screenshot();
@@ -1999,7 +2002,6 @@ pb_objects::Image Client::getPixelData(core::position2di cursorPosition, bool is
 	irr::video::IImage* const image =
 			driver->createImage(video::ECF_R8G8B8, raw_image->getDimension());
 	raw_image->copyTo(image);
-	raw_image->drop();
 
 	// if provided draw the cursor image at the current mouse position when GUI is open
 	if (isMenuActive && cursorImage) {
@@ -2015,6 +2017,7 @@ pb_objects::Image Client::getPixelData(core::position2di cursorPosition, bool is
 	pb_img.set_width(dim.Width);
 	pb_img.set_height(dim.Height);
 	image->drop();
+	raw_image->drop();
 	return pb_img;
 }
 

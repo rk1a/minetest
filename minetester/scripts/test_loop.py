@@ -1,15 +1,18 @@
 #!/usr/bin/env python3
 from minetester import Minetest
+import os
 
 env = Minetest(
     seed=42,
     start_minetest=True,
-    xvfb_headless=True,
     sync_port=30010,
     sync_dtime=0.05,
+    headless=True,
+    start_xvfb=True,
+    clientmods=["random_v0"],
 )
 
-render = True
+render = True 
 obs = env.reset()
 done = False
 while not done:

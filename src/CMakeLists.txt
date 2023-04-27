@@ -36,6 +36,17 @@ set(CMAKE_BUILD_TYPE "${CMAKE_BUILD_TYPE}" CACHE STRING
 # Set some random things default to not being visible in the GUI
 mark_as_advanced(EXECUTABLE_OUTPUT_PATH LIBRARY_OUTPUT_PATH)
 
+if(BUILD_CLIENT AND BUILD_HEADLESS)
+	find_package(SDL2 REQUIRED NO_DEFAULT_PATH)
+	# SDL2 exports targets since 2.0.6, but some distributions override config.
+	if(NOT TARGET SDL2::SDL2)
+		add_library(SDL2::SDL2 INTERFACE IMPORTED)
+		set_target_properties(SDL2::SDL2 PROPERTIES
+			INTERFACE_INCLUDE_DIRECTORIES ${SDL2_INCLUDE_DIRS}
+			INTERFACE_LINK_LIBRARIES ${SDL2_LIBRARIES}
+		)
+	endif()
+endif()
 
 if(NOT (BUILD_CLIENT OR BUILD_SERVER))
 	message(WARNING "Neither BUILD_CLIENT nor BUILD_SERVER is set! Setting BUILD_SERVER=true")
@@ -63,7 +74,6 @@ if(NOT USE_CURL)
 		message(WARNING "cURL is required to announce to the server list")
 	endif()
 endif()
-
 
 option(ENABLE_GETTEXT "Use GetText for internationalization" ${BUILD_CLIENT})
 set(USE_GETTEXT FALSE)
@@ -528,10 +538,12 @@ include_directories(SYSTEM
 	${ZMQ_INCLUDE_DIR}
 	${ZMQPP_INCLUDE_DIR}
 	${SQLITE3_INCLUDE_DIR}
+	${SDL2_INCLUDE_DIR}
 	${LUA_INCLUDE_DIR}
 	${GMP_INCLUDE_DIR}
 	${JSON_INCLUDE_DIR}
 	${LUA_BIT_INCLUDE_DIR}
+	${SDL2_INCLUDE_DIR}
 )
 
 if(USE_GETTEXT)
@@ -560,16 +572,22 @@ endif()
 if(BUILD_CLIENT)
 	add_executable(${PROJECT_NAME} ${client_SRCS} ${extra_windows_SRCS})
 	add_dependencies(${PROJECT_NAME} GenerateVersion)
+
+	if(BUILD_HEADLESS)
+		set(SDL2_TARGET SDL2::SDL2)
+	endif()
 	target_link_libraries(
 		${PROJECT_NAME}
 		${ZLIB_LIBRARIES}
 		IrrlichtMt::IrrlichtMt
+		${SDL2_TARGET}
 		${ZSTD_LIBRARY}
 		${ZMQ_LIBRARY}
 		${ZMQPP_LIBRARY}
 		${X11_LIBRARIES}
 		${SOUND_LIBRARIES}
 		${SQLITE3_LIBRARY}
+		${SDL2_LIBRARY}
 		${LUA_LIBRARY}
 		${GMP_LIBRARY}
 		${JSON_LIBRARY}

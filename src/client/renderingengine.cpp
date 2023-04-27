@@ -18,6 +18,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
+#include "cmake_config.h"
 #include <IrrlichtDevice.h>
 #include "fontengine.h"
 #include "client.h"
@@ -35,6 +36,9 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "inputhandler.h"
 #include "gettext.h"
 #include "../gui/guiSkin.h"
+#if BUILD_HEADLESS
+	#include <SDL_video.h>
+#endif
 
 #if !defined(_WIN32) && !defined(__APPLE__) && !defined(__ANDROID__) && \
 		!defined(SERVER) && !defined(__HAIKU__)
@@ -139,6 +143,10 @@ RenderingEngine::RenderingEngine(IEventReceiver *receiver)
 	std::string rel_path = std::string("client") + DIR_DELIM
 			+ "shaders" + DIR_DELIM + "Irrlicht";
 	params.OGLES2ShaderPath = (porting::path_share + DIR_DELIM + rel_path + DIR_DELIM).c_str();
+#endif
+
+#if BUILD_HEADLESS
+	SDL_VideoInit("offscreen");
 #endif
 
 	m_device = createDeviceEx(params);
@@ -655,3 +663,4 @@ float RenderingEngine::getDisplayDensity()
 }
 
 #endif // __ANDROID__
+

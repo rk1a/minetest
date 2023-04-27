@@ -1224,7 +1224,7 @@ bool Game::startup(bool *kill,
 		if (start_data.isDumbClient()) {
 			dynamic_cast<DumbClientInputHandler*>(input)->socket = data_socket;
 		}
-		if (start_data.record)  {
+		if (start_data.isRecording())  {
 			createRecorder(start_data);
 			recorder->sender = data_socket;
 		}
@@ -1267,10 +1267,12 @@ void Game::run()
 	irr::core::dimension2d<u32> previous_screen_size(g_settings->getU16("screen_w"),
 		g_settings->getU16("screen_h"));
 
+	bool firstIter = true;
 	bool disconnecting = false;
 	while (m_rendering_engine->run()
 			&& !(*kill || g_gamecallback->shutdown_requested
 			|| (server && server->isShutdownRequested()))) {
+		
 		
 		float reward;
 		bool terminal;
@@ -1301,7 +1303,7 @@ void Game::run()
 		
 		// send data out
 		std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
-		if(recorder) {
+		if(recorder && !firstIter) {
 			pb_objects::Image pb_img = client->getPixelData(input->getMousePos(), isMenuActive(), cursorImage);
 			recorder->setImage(pb_img);
 			recorder->setReward(reward);
@@ -1311,6 +1313,7 @@ void Game::run()
 		std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
 		//warningstream << "Time difference = " << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() << "[µs]" << std::endl;
 
+		
 		const irr::core::dimension2d<u32> &current_screen_size =
 			m_rendering_engine->get_video_driver()->getScreenSize();
 		// Verify if window size has changed and save it if it's the case
@@ -1347,9 +1350,12 @@ void Game::run()
 
 
 		updateProfilers(stats, draw_times, dtime);
-		processUserInput(dtime);
+		//skip if there is a recorder and it's the first iteration
+		if(!recorder || !firstIter){
+			processUserInput(dtime);
+		}
 		// record action
-		if(recorder) {
+		if(recorder && !firstIter) {
 			pb_objects::Action lastAction = input->getLastAction();
 			recorder->setAction(lastAction);
 		}
@@ -1373,6 +1379,7 @@ void Game::run()
 				resumeAnimation();
 		}
 
+		
 		if (!m_is_paused)
 			step(dtime);
 		processClientEvents(&cam_view_target);
@@ -1389,7 +1396,7 @@ void Game::run()
 		if (m_does_lost_focus_pause_game && !device->isWindowFocused() && !isMenuActive()) {
 			showPauseMenu();
 		}
-
+		firstIter = false;
 	}
 }
 

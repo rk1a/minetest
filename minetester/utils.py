@@ -1,5 +1,6 @@
+import os
 import subprocess
-from typing import Any, Dict
+from typing import Any, Dict, Tuple
 
 import numpy as np
 from minetester.proto import objects_pb2 as pb_objects
@@ -104,6 +105,7 @@ def start_minetest_server(
         cmd.extend(["--sync-dtime", str(sync_dtime)])
     stdout_file = log_path.format("server_stdout")
     stderr_file = log_path.format("server_stderr")
+
     with open(stdout_file, "w") as out, open(stderr_file, "w") as err:
         server_process = subprocess.Popen(cmd, stdout=out, stderr=err)
     return server_process
@@ -117,8 +119,9 @@ def start_minetest_client(
     server_port: int = 30000,
     cursor_img: str = "cursors/mouse_cursor_white_16x16.png",
     client_name: str = "MinetestAgent",
-    xvfb_headless: bool = False,
     sync_port: int = None,
+    headless: bool = False,
+    display: int = None
 ):
     cmd = [
         minetest_path,
@@ -139,10 +142,7 @@ def start_minetest_client(
         "--config",
         config_path,
     ]
-    if xvfb_headless:
-        # hide window
-        cmd.insert(0, "-a")  # allow restarts
-        cmd.insert(0, "xvfb-run")
+    if headless:
         # don't render to screen
         cmd.append("--headless")
     if cursor_img:
@@ -153,5 +153,24 @@ def start_minetest_client(
     stdout_file = log_path.format("client_stdout")
     stderr_file = log_path.format("client_stderr")
     with open(stdout_file, "w") as out, open(stderr_file, "w") as err:
-        client_process = subprocess.Popen(cmd, stdout=out, stderr=err)
+        client_env = os.environ.copy()
+        if display is not None:
+            client_env["DISPLAY"] = ":"+str(display)
+        client_process = subprocess.Popen(cmd, stdout=out, stderr=err, env=client_env)
     return client_process
+
+
+def start_xserver(
+    display_idx: int = 1,
+    display_size: Tuple[int, int] = (1024, 600),
+    display_depth: int = 24,
+):
+    cmd = [
+        "Xvfb",
+        f":{display_idx}",
+        "-screen",
+        "0",  # screennum param
+        f"{display_size[0]}x{display_size[1]}x{display_depth}",
+    ]
+    xserver_process = subprocess.Popen(cmd)
+    return xserver_process
