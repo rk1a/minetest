@@ -1,7 +1,6 @@
 import datetime
 import logging
 import os
-import random
 import shutil
 import uuid
 from typing import Any, Dict, List, Optional, Tuple
@@ -9,10 +8,15 @@ from typing import Any, Dict, List, Optional, Tuple
 import gym
 import matplotlib.pyplot as plt
 import numpy as np
-import psutil
 import zmq
-from minetester.utils import (KEY_MAP, pack_pb_action, start_minetest_client,
-                              start_minetest_server, unpack_pb_obs, start_xserver)
+from minetester.utils import (
+    KEY_MAP,
+    pack_pb_action,
+    start_minetest_client,
+    start_minetest_server,
+    unpack_pb_obs,
+    start_xserver,
+)
 
 
 class Minetest(gym.Env):
@@ -248,7 +252,7 @@ class Minetest(gym.Env):
             self.cursor_image_path,
             sync_port=self.sync_port,
             headless=self.headless,
-            display=self.x_display
+            display=self.x_display,
         )
 
     def _check_world_dir(self):
@@ -280,8 +284,8 @@ class Minetest(gym.Env):
             config_file.write("mute_sound = true\n")
             config_file.write("show_debug = false\n")
             config_file.write("enable_client_modding = true\n")
-            #config_file.write("video_driver = null\n")
-            #config_file.write("enable_shaders = false\n")
+            # config_file.write("video_driver = null\n")
+            # config_file.write("enable_shaders = false\n")
             config_file.write("csm_restriction_flags = 0\n")
             config_file.write("enable_mod_channels = true\n")
             config_file.write("server_map_save_interval = 1000000\n")

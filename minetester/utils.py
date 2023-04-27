@@ -121,7 +121,7 @@ def start_minetest_client(
     client_name: str = "MinetestAgent",
     sync_port: int = None,
     headless: bool = False,
-    display: int = None
+    display: int = None,
 ):
     cmd = [
         minetest_path,
@@ -155,7 +155,7 @@ def start_minetest_client(
     with open(stdout_file, "w") as out, open(stderr_file, "w") as err:
         client_env = os.environ.copy()
         if display is not None:
-            client_env["DISPLAY"] = ":"+str(display)
+            client_env["DISPLAY"] = ":" + str(display)
         client_process = subprocess.Popen(cmd, stdout=out, stderr=err, env=client_env)
     return client_process
 

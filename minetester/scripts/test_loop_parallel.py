@@ -24,6 +24,7 @@ if __name__ == "__main__":
                 env_port=5555 + rank,
                 server_port=30000 + rank,
                 seed=seed + rank,
+                sync_port=30010 + rank,
                 **env_kwargs,
             )
             env = TimeLimit(env, max_episode_steps=int(max_steps * random.random()))
@@ -39,7 +40,8 @@ if __name__ == "__main__":
         "display_size": (600, 400),
         "fov": 72,
         "headless": True,
-        "x_display": x_display
+        "x_display": x_display,
+        "sync_dtime": 0.05,
     }
 
     # Create a vectorized environment
