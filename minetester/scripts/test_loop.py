@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
 from minetester import Minetest
+import os
 
 env = Minetest(
     seed=42,
     start_minetest=True,
+    sync_port=30010,
+    sync_dtime=0.05,
     headless=True,
     start_xvfb=True,
     clientmods=["random_v0"],
@@ -15,7 +18,7 @@ done = False
 while not done:
     try:
         action = env.action_space.sample()
-        obs, rew, info = env.step(action)
+        obs, rew, done, info = env.step(action)
         if render:
             env.render()
     except KeyboardInterrupt:

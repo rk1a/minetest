@@ -7,6 +7,6 @@ minetest.register_on_modchannel_message(function(channel_name, sender, message)
         local reward = tonumber(split_message())
         local terminal = split_message()
         REWARD = reward
-        TERMINAL = terminal  == "1"
+        TERMINAL = terminal == "1"
     end
 end)

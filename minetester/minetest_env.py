@@ -1,7 +1,6 @@
 import datetime
 import logging
 import os
-import random
 import shutil
 import uuid
 from typing import Any, Dict, List, Optional, Tuple
@@ -9,14 +8,20 @@ from typing import Any, Dict, List, Optional, Tuple
 import gym
 import matplotlib.pyplot as plt
 import numpy as np
-import psutil
 import zmq
-from minetester.utils import (KEY_MAP, pack_pb_action, start_minetest_client,
-                              start_minetest_server, unpack_pb_obs, start_xserver)
+from minetester.utils import (
+    KEY_MAP,
+    pack_pb_action,
+    start_minetest_client,
+    start_minetest_server,
+    unpack_pb_obs,
+    start_xserver,
+)
 
 
 class Minetest(gym.Env):
     metadata = {"render.modes": ["rgb_array", "human"]}
+    default_display_size = (1024, 600)
 
     def __init__(
         self,
@@ -27,13 +32,16 @@ class Minetest(gym.Env):
         config_path: Optional[os.PathLike] = None,
         cursor_image_path: Optional[os.PathLike] = None,
         world_dir: Optional[os.PathLike] = None,
-        display_size: Tuple[int, int] = (1024, 600),
+        display_size: Tuple[int, int] = default_display_size,
         fov: int = 72,
         seed: Optional[int] = None,
         start_minetest: bool = True,
+        game_id: str = "minetest",
         clientmods: List[str] = [],
         servermods: List[str] = [],
         config_dict: Dict[str, Any] = {},
+        sync_port: Optional[int] = None,
+        sync_dtime: Optional[float] = None,
         headless: bool = False,
         start_xvfb: bool = False,
         x_display: Optional[int] = None,
@@ -102,6 +110,9 @@ class Minetest(gym.Env):
         # Used ports
         self.env_port = env_port  # MT env <-> MT client
         self.server_port = server_port  # MT client <-> MT server
+        self.sync_port = sync_port  # MT client <-> MT server
+
+        self.sync_dtime = sync_dtime
 
         # ZMQ objects
         self.socket = None
@@ -129,12 +140,19 @@ class Minetest(gym.Env):
             level=logging.DEBUG,
         )
 
-        # Configure mods
-        self.clientmods = clientmods + ["rewards"]  # require the base rewards mod
-        # add client mod names in case they entail a server side component
-        self.servermods = servermods + clientmods
-        self._enable_clientmods()
-        self._enable_servermods()
+        # Configure game and mods
+        self.game_id = game_id
+        self.clientmods = clientmods
+        self.servermods = servermods
+        if self.sync_port:
+            self.servermods += ["rewards"]  # require the server rewards mod
+            self._enable_servermods()
+        else:
+            self.clientmods += ["rewards"]  # require the client rewards mod
+            # add client mod names in case they entail a server side component
+            self.servermods += clientmods
+            self._enable_clientmods()
+            self._enable_servermods()
 
         # Write minetest.conf
         self.config_dict = config_dict
@@ -189,7 +207,7 @@ class Minetest(gym.Env):
                     f" It must be located at {mod_folder}.",
                 )
             else:
-                shutil.copytree(mod_folder, world_mod_folder)
+                shutil.copytree(mod_folder, world_mod_folder, dirs_exist_ok=True)
 
     def _reset_zmq(self):
         if self.socket:
@@ -219,10 +237,12 @@ class Minetest(gym.Env):
             log_path,
             self.server_port,
             self.world_dir,
+            self.sync_port,
+            self.sync_dtime,
+            self.game_id,
         )
 
         # (Re)start Minetest client
-        os.environ["DISPLAY"] = f":{self.x_display}"
         self.client_process = start_minetest_client(
             self.minetest_executable,
             self.config_path,
@@ -230,13 +250,28 @@ class Minetest(gym.Env):
             self.env_port,
             self.server_port,
             self.cursor_image_path,
+            sync_port=self.sync_port,
             headless=self.headless,
+            display=self.x_display,
         )
-        os.environ["DISPLAY"] = f":{self.default_display}"
+
+    def _check_world_dir(self):
+        if self.world_dir is None:
+            raise RuntimeError(
+                "World directory was not set. Please, provide a world directory "
+                "in the constructor or seed the environment!",
+            )
 
     def _delete_world(self):
         if os.path.exists(self.world_dir):
             shutil.rmtree(self.world_dir)
+
+    def _check_config_path(self):
+        if self.config_path is None:
+            raise RuntimeError(
+                "Minetest config path was not set. Please, provide a config path "
+                "in the constructor or seed the environment!",
+            )
 
     def _delete_config(self):
         if os.path.exists(self.config_path):
@@ -245,17 +280,37 @@ class Minetest(gym.Env):
     def _write_config(self):
         with open(self.config_path, "w") as config_file:
             # Update default settings
+            # TODO load these values from custom minetest config
             config_file.write("mute_sound = true\n")
             config_file.write("show_debug = false\n")
             config_file.write("enable_client_modding = true\n")
-            #config_file.write("video_driver = null\n")
-            #config_file.write("enable_shaders = false\n")
+            # config_file.write("video_driver = null\n")
+            # config_file.write("enable_shaders = false\n")
             config_file.write("csm_restriction_flags = 0\n")
             config_file.write("enable_mod_channels = true\n")
+            config_file.write("server_map_save_interval = 1000000\n")
+            config_file.write("profiler_print_interval = 0\n")
+            config_file.write("active_block_range = 2\n")
+            config_file.write("abm_time_budget = 0.01\n")
+            config_file.write("abm_interval = 0.1\n")
+            config_file.write("active_block_mgmt_interval = 4.0\n")
+            config_file.write("server_unload_unused_data_timeout = 1000000\n")
+            config_file.write("client_unload_unused_data_timeout = 1000000\n")
+            config_file.write("debug_log_level = verbose\n")
+            config_file.write("full_block_send_enable_min_time_from_building = 0.\n")
+            config_file.write("max_block_send_distance = 100\n")
+            config_file.write("max_block_generate_distance = 100\n")
+            config_file.write("num_emerge_threads = 0\n")
+            config_file.write("emergequeue_limit_total = 1000000\n")
+            config_file.write("emergequeue_limit_diskonly = 1000000\n")
+            config_file.write("emergequeue_limit_generate = 1000000\n")
 
             # Set display size
             config_file.write(f"screen_w = {self.display_size[0]}\n")
             config_file.write(f"screen_h = {self.display_size[1]}\n")
+            # Adapt HUD size to display size
+            hud_scale = self.display_size[0] / Minetest.default_display_size[0]
+            config_file.write(f"hud_scaling = {hud_scale}\n")
 
             # Set FOV
             config_file.write(f"fov = {self.fov_y}\n")
@@ -265,6 +320,7 @@ class Minetest(gym.Env):
                 config_file.write(f"fixed_map_seed = {self.the_seed}\n")
 
             # Set from custom config dict
+            # TODO enable overwriting of default settings
             for key, value in self.config_dict.items():
                 config_file.write(f"{key} = {value}\n")
 
@@ -310,7 +366,7 @@ class Minetest(gym.Env):
 
         self.last_obs = next_obs
         logging.debug(f"Received obs - {next_obs.shape}; reward - {rew}")
-        return next_obs, rew, info
+        return next_obs, rew, done, info
 
     def render(self, render_mode: str = "human"):
         if render_mode == "human":

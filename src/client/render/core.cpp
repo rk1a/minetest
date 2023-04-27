@@ -32,6 +32,10 @@ RenderingCore::RenderingCore(IrrlichtDevice *_device, Client *_client, Hud *_hud
 	: device(_device), client(_client), hud(_hud), shadow_renderer(_shadow_renderer), 
 	pipeline(_pipeline), virtual_size_scale(_virtual_size_scale)
 {
+	if (client->getRenderingEngine()->headless) {
+		m_buffer = pipeline->createOwned<TextureBuffer>();
+		m_buffer->setTexture(0, v2f(1.0f, 1.0f), "idk_lol", video::ECF_R8G8B8);
+	}
 }
 
 RenderingCore::~RenderingCore()
@@ -61,9 +65,7 @@ void RenderingCore::draw(video::SColor _skycolor, bool _show_hud, bool _show_min
 	context.show_minimap = _show_minimap;
 
     if(client->getRenderingEngine()->headless) {
-		TextureBuffer *buffer = pipeline->createOwned<TextureBuffer>();
-		buffer->setTexture(0, v2f(1.0f, 1.0f), "idk_lol", video::ECF_R8G8B8);
-		auto tex = new TextureBufferOutput(buffer, 0);
+		auto tex = new TextureBufferOutput(m_buffer, 0);
 		pipeline->setRenderTarget(tex);
 		pipeline->reset(context);
 		pipeline->run(context);
@@ -71,8 +73,7 @@ void RenderingCore::draw(video::SColor _skycolor, bool _show_hud, bool _show_min
 		auto t = tex->buffer->getTexture(0);
 		auto raw_image = device->getVideoDriver()->createImageFromData(
 			t->getColorFormat(),
-			device->getVideoDriver()->getScreenSize(),
-			// t->getSize(),
+			screensize,
 			t->lock(irr::video::E_TEXTURE_LOCK_MODE::ETLM_READ_ONLY),
 			false  //copy mem
 			);
@@ -80,8 +81,7 @@ void RenderingCore::draw(video::SColor _skycolor, bool _show_hud, bool _show_min
 			screenshot->drop();
 		screenshot =
 				device->getVideoDriver()->createImage(video::ECF_R8G8B8,
-				device->getVideoDriver()->getScreenSize()
-				//  raw_image->getDimension()
+				screensize
 				);
 		raw_image->copyTo(screenshot);
 		t->unlock();
