@@ -411,10 +411,10 @@ public:
 
 	void showMinimap(bool show = true);
 
-	// sends data out
+	// Added methods
 	float getReward();
 	bool getTerminal();
-	pb_objects::Image getSendableData(core::position2di cursorPosition, bool isMenuActive, irr::video::IImage* cursorImage);
+	pb_objects::Image getPixelData(core::position2di cursorPosition, bool isMenuActive, irr::video::IImage* cursorImage);
 	RenderingEngine* getRenderingEngine();
 
 	const Address getServerAddress();

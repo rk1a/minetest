@@ -14,15 +14,16 @@ from minetester.utils import (
     pack_pb_action,
     start_minetest_client,
     start_minetest_server,
-    start_xserver,
-    unpack_pb_obs,
     read_config_file,
     write_config_file,
+    unpack_pb_obs,
+    start_xserver,
 )
 
 
 class Minetest(gym.Env):
     metadata = {"render.modes": ["rgb_array", "human"]}
+    default_display_size = (1024, 600)
 
     def __init__(
         self,
@@ -33,14 +34,17 @@ class Minetest(gym.Env):
         config_path: Optional[os.PathLike] = None,
         cursor_image_path: Optional[os.PathLike] = None,
         world_dir: Optional[os.PathLike] = None,
-        display_size: Tuple[int, int] = (1024, 600),
+        display_size: Tuple[int, int] = default_display_size,
         fov: int = 72,
         base_seed: int = 0,
         world_seed: Optional[int] = None,
         start_minetest: bool = True,
+        game_id: str = "minetest",
         clientmods: List[str] = [],
         servermods: List[str] = [],
         config_dict: Dict[str, Any] = {},
+        sync_port: Optional[int] = None,
+        sync_dtime: Optional[float] = None,
         headless: bool = False,
         start_xvfb: bool = False,
         x_display: Optional[int] = None,
@@ -113,6 +117,9 @@ class Minetest(gym.Env):
         # Used ports
         self.env_port = env_port  # MT env <-> MT client
         self.server_port = server_port  # MT client <-> MT server
+        self.sync_port = sync_port  # MT client <-> MT server
+
+        self.sync_dtime = sync_dtime
 
         # ZMQ objects
         self.socket = None
@@ -145,12 +152,19 @@ class Minetest(gym.Env):
             level=logging.DEBUG,
         )
 
-        # Configure mods
-        self.clientmods = clientmods + ["rewards"]  # require the base rewards mod
-        # add client mod names in case they entail a server side component
-        self.servermods = servermods + clientmods
-        self._enable_clientmods()
-        self._enable_servermods()
+        # Configure game and mods
+        self.game_id = game_id
+        self.clientmods = clientmods
+        self.servermods = servermods
+        if self.sync_port:
+            self.servermods += ["rewards"]  # require the server rewards mod
+            self._enable_servermods()
+        else:
+            self.clientmods += ["rewards"]  # require the client rewards mod
+            # add client mod names in case they entail a server side component
+            self.servermods += clientmods
+            self._enable_clientmods()
+            self._enable_servermods()
 
         # Write minetest.conf
         self.config_dict = config_dict
@@ -205,7 +219,7 @@ class Minetest(gym.Env):
                     f" It must be located at {mod_folder}.",
                 )
             else:
-                shutil.copytree(mod_folder, world_mod_folder)
+                shutil.copytree(mod_folder, world_mod_folder, dirs_exist_ok=True)
 
     def _reset_zmq(self):
         if self.socket:
@@ -235,10 +249,12 @@ class Minetest(gym.Env):
             log_path,
             self.server_port,
             self.world_dir,
+            self.sync_port,
+            self.sync_dtime,
+            self.game_id,
         )
 
         # (Re)start Minetest client
-        os.environ["DISPLAY"] = f":{self.x_display}"
         self.client_process = start_minetest_client(
             self.minetest_executable,
             self.config_path,
@@ -246,21 +262,36 @@ class Minetest(gym.Env):
             self.env_port,
             self.server_port,
             self.cursor_image_path,
+            sync_port=self.sync_port,
             headless=self.headless,
+            display=self.x_display,
         )
-        os.environ["DISPLAY"] = f":{self.default_display}"
+
+    def _check_world_dir(self):
+        if self.world_dir is None:
+            raise RuntimeError(
+                "World directory was not set. Please, provide a world directory "
+                "in the constructor or seed the environment!",
+            )
 
     def _delete_world(self):
         if os.path.exists(self.world_dir):
             shutil.rmtree(self.world_dir, ignore_errors=True)
+
+    def _check_config_path(self):
+        if self.config_path is None:
+            raise RuntimeError(
+                "Minetest config path was not set. Please, provide a config path "
+                "in the constructor or seed the environment!",
+            )
 
     def _delete_config(self):
         if os.path.exists(self.config_path):
             os.remove(self.config_path)
 
     def _write_config(self):
-        # Base config
         config = dict(
+            # Base config
             mute_sound=True,
             show_debug=False,
             enable_client_modding=True,
@@ -269,7 +300,26 @@ class Minetest(gym.Env):
             screen_w=self.display_size[0],
             screen_h=self.display_size[1],
             fov=self.fov_y,
+            # Adapt HUD size to display size
+            hud_scaling=self.display_size[0] / Minetest.default_display_size[0],
+            # Experimental settings to improve performance
+            server_map_save_interval=1000000,
+            profiler_print_interval=0,
+            active_block_range=2,
+            abm_time_budget=0.01,
+            abm_interval=0.1,
+            active_block_mgmt_interval=4.0,
+            server_unload_unused_data_timeout=1000000,
+            client_unload_unused_data_timeout=1000000,
+            full_block_send_enable_min_time_from_building=0.,
+            max_block_send_distance=100,
+            max_block_generate_distance=100,
+            num_emerge_threads=0,
+            emergequeue_limit_total=1000000,
+            emergequeue_limit_diskonly=1000000,
+            emergequeue_limit_generate=1000000,
         )
+
         # Seed the map generator if not using a custom map
         if self.world_seed:
             config.update(fixed_map_seed=self.world_seed)
