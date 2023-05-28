@@ -1,4 +1,4 @@
-1. Install prereqs 
+1. Install prereqs
   1. sudo apt-get install xvfb g++ make libzmq3-dev libtool pkg-config build-essential autoconf automake libc6-dev cmake libpng-dev libjpeg-dev libxi-dev libgl1-mesa-dev libsqlite3-dev libogg-dev libvorbis-dev libopenal-dev libcurl4-gnutls-dev libfreetype6-dev zlib1g-dev libgmp-dev libjsoncpp-dev libzstd-dev libluajit-5.1-dev protobuf-compiler
 
 2. Build SDL2
@@ -33,17 +33,14 @@
 6. Build minetest
   1. cd into minetest
   2. either run
-     cmake . -DRUN_IN_PLACE=TRUE -DBUILD_HEADLESS=1 -DSDL2_DIR=<path to SDL repo>/SDL/build/lib/cmake/SDL2/ 
-     or 
+     cmake . -DRUN_IN_PLACE=TRUE -DBUILD_HEADLESS=1 -DSDL2_DIR=<path to SDL repo>/SDL/build/lib/cmake/SDL2/
+     or
      cmake . -DRUN_IN_PLACE=TRUE -DBUILD_HEADLESS=0 -DSDL2_DIR=
   3. run make -j$(nproc)
 
-7. setup python 
-  1. create a new python conda env or venv (tested with python3.9)
-  2. pip install gym matplotlib protobuf==3.20.1 psutil zmq
+7. setup python
+  1. create and activate a new python conda env or venv (tested with python3.9)
+  2. pip install gym matplotlib protobuf==3.20.1 psutil zmq -e ./minetest
   3. cd into the scripts directory and run compile_proto.sh
   4. run python -m minetester.scripts.test_loop
-
-   
-
 
