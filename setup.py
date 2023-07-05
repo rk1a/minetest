@@ -1,5 +1,7 @@
 from setuptools import setup
 
+DEV = ["pre-commit", "black", "isort", "flake8"]
+
 setup(
     name='Minetester',
     version='0.0.1',
@@ -15,4 +17,5 @@ setup(
         'protobuf==3.20.1',
         'psutil',
     ],
+    extras_require={"dev": DEV}
 )

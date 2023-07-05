@@ -1,3 +1,4 @@
+"""Minetest gym environment."""
 import datetime
 import logging
 import os
@@ -9,17 +10,20 @@ import gym
 import matplotlib.pyplot as plt
 import numpy as np
 import zmq
+
 from minetester.utils import (
     KEY_MAP,
     pack_pb_action,
     start_minetest_client,
     start_minetest_server,
-    unpack_pb_obs,
     start_xserver,
+    unpack_pb_obs,
 )
 
 
 class Minetest(gym.Env):
+    """Minetest gym environment."""
+
     metadata = {"render.modes": ["rgb_array", "human"]}
     default_display_size = (1024, 600)
 
@@ -46,6 +50,31 @@ class Minetest(gym.Env):
         start_xvfb: bool = False,
         x_display: Optional[int] = None,
     ):
+        """Initialize Minetest environment.
+
+        Args:
+            env_port: Port between gym environment and a Minetest client
+            server_port: Port between Minetest client and server
+            minetest_executable: Path to Minetest executable
+            log_dir: Path to log directory
+            config_path: Path to minetest.conf
+            cursor_image_path: Path to cursor image for menu and inventory
+            world_dir: Path to Minetest world directory
+            display_size: Size in pixels of the Minetest window
+            fov: Field of view in degrees of the Minetest window
+            seed: Seed for the Minetest world
+            start_minetest: Whether to start Minetest server and client or
+                connect to existing processes
+            game_id: Name of the Minetest game
+            clientmods: List of client mod names
+            servermods: List of server mod names
+            config_dict: Dictionary of config options updating the loaded config file
+            sync_port: Port between Minetest client and server for synchronization
+            sync_dtime: In-game time between two steps
+            headless: Whether to run Minetest in headless mode
+            start_xvfb: Whether to start X server virtual framebuffer
+            x_display: Display number to use for the X server virtual framebuffer
+        """
         self.unique_env_id = str(uuid.uuid4())
 
         # Graphics settings
@@ -324,10 +353,20 @@ class Minetest(gym.Env):
             for key, value in self.config_dict.items():
                 config_file.write(f"{key} = {value}\n")
 
-    def seed(self, seed: int):
+    def seed(self, seed: int) -> None:
+        """Seed the environment with a given seed.
+
+        Args:
+            seed: The seed to use.
+        """
         self.the_seed = seed
 
-    def reset(self):
+    def reset(self) -> np.ndarray:
+        """Reset the environment.
+
+        Returns:
+            The initial observation.
+        """
         if self.start_minetest:
             if self.reset_world:
                 self._delete_world()
@@ -343,7 +382,19 @@ class Minetest(gym.Env):
         logging.debug("Received first obs: {}".format(obs.shape))
         return obs
 
-    def step(self, action: Dict[str, Any]):
+    def step(
+        self,
+        action: Dict[str, Any],
+    ) -> Tuple[np.ndarray, float, bool, Dict[str, Any]]:
+        """Perform an action in the environment.
+
+        Args:
+            action: The action to perform.
+
+        Returns:
+            The next observation, the reward, whether the episode is done, and
+            additional info.
+        """
         # Send action
         if isinstance(action["MOUSE"], np.ndarray):
             action["MOUSE"] = action["MOUSE"].tolist()
@@ -351,7 +402,8 @@ class Minetest(gym.Env):
         pb_action = pack_pb_action(action)
         self.socket.send(pb_action.SerializeToString())
 
-        # TODO more robust check for whether a server/client is alive while receiving observations
+        # TODO more robust check for whether a server/client
+        # is alive while receiving observations
         for process in [self.server_process, self.client_process]:
             if process is not None and process.poll() is not None:
                 return self.last_obs, 0.0, True, {}
@@ -368,7 +420,18 @@ class Minetest(gym.Env):
         logging.debug(f"Received obs - {next_obs.shape}; reward - {rew}")
         return next_obs, rew, done, info
 
-    def render(self, render_mode: str = "human"):
+    def render(self, render_mode: str = "human") -> Optional[np.ndarray]:
+        """Render the environment.
+
+        Args:
+            render_mode: The mode to render in. Can be "human" or "rgb_array".
+
+        Returns:
+            If render_mode is "rgb_array", returns the rendered image.
+
+        Raises:
+            NotImplementedError: If render_mode is not "human" or "rgb_array".
+        """
         if render_mode == "human":
             if self.render_img is None:
                 # Setup figure
@@ -392,10 +455,11 @@ class Minetest(gym.Env):
             raise NotImplementedError(
                 "You are calling 'render()' with an unsupported"
                 f" render mode: '{render_mode}'. "
-                f"Supported modes: {self.metadata['render.modes']}"
+                f"Supported modes: {self.metadata['render.modes']}",
             )
 
-    def close(self):
+    def close(self) -> None:
+        """Close the environment."""
         if self.render_fig is not None:
             plt.close()
         if self.socket is not None:

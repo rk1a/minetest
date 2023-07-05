@@ -1,8 +1,10 @@
+"""Utility functions for Minetester."""
 import os
 import subprocess
 from typing import Any, Dict, Tuple
 
 import numpy as np
+
 from minetester.proto import objects_pb2 as pb_objects
 from minetester.proto.objects_pb2 import KeyType
 
@@ -37,7 +39,21 @@ NOOP_ACTION = {key: 0 for key in KEY_MAP.keys()}
 NOOP_ACTION.update({"MOUSE": np.zeros(2, dtype=int)})
 
 
-def unpack_pb_obs(received_obs: str):
+def unpack_pb_obs(
+    received_obs: str,
+) -> Tuple[np.ndarray, float, bool, Dict[str, Any], Dict[str, int]]:
+    """Unpack a protobuf observation received from Minetest client.
+
+    Note: here 'observation' encompasses all information received from the client
+    within one step and should not be confused with the observation
+    returned by a gym environment.
+
+    Args:
+        received_obs: The received observation.
+
+    Returns:
+        The displayed image, task reward, done flag, info dict and last action.
+    """
     pb_obs = pb_objects.Observation()
     pb_obs.ParseFromString(received_obs)
     obs = np.frombuffer(pb_obs.image.data, dtype=np.uint8).reshape(
@@ -53,7 +69,15 @@ def unpack_pb_obs(received_obs: str):
     return obs, rew, done, info, last_action
 
 
-def unpack_pb_action(pb_action: pb_objects.Action):
+def unpack_pb_action(pb_action: pb_objects.Action) -> Dict[str, int]:
+    """Unpack a protobuf action.
+
+    Args:
+        pb_action: The protobuf action.
+
+    Returns:
+        The unpacked action as dictionary.
+    """
     action = dict(NOOP_ACTION)
     action["MOUSE"] = [pb_action.mouseDx, pb_action.mouseDy]
     for key_event in pb_action.keyEvents:
@@ -63,7 +87,15 @@ def unpack_pb_action(pb_action: pb_objects.Action):
     return action
 
 
-def pack_pb_action(action: Dict[str, Any]):
+def pack_pb_action(action: Dict[str, Any]) -> pb_objects.Action:
+    """Pack a protobuf action.
+
+    Args:
+        action: The action as dictionary.
+
+    Returns:
+        The packed protobuf action.
+    """
     pb_action = pb_objects.Action()
     pb_action.mouseDx, pb_action.mouseDy = action["MOUSE"]
     for key, v in action.items():
@@ -87,7 +119,22 @@ def start_minetest_server(
     sync_port: int = None,
     sync_dtime: float = 0.001,
     game_id: str = "minetest",
-):
+) -> subprocess.Popen:
+    """Start a Minetest server.
+
+    Args:
+        minetest_path: Path to the Minetest executable.
+        config_path: Path to the minetest.conf file.
+        log_path: Path to the log files.
+        server_port: Port of the server.
+        world_dir: Path to the world directory.
+        sync_port: Port for the synchronization with the server.
+        sync_dtime: In-game time between two steps.
+        game_id: Game ID of the game to be used.
+
+    Returns:
+        The server process.
+    """
     cmd = [
         minetest_path,
         "--server",
@@ -122,7 +169,24 @@ def start_minetest_client(
     sync_port: int = None,
     headless: bool = False,
     display: int = None,
-):
+) -> subprocess.Popen:
+    """Start a Minetest client.
+
+    Args:
+        minetest_path: Path to the Minetest executable.
+        config_path: Path to the minetest.conf file.
+        log_path: Path to the log files.
+        client_port: Port of the client.
+        server_port: Port of the server to connect to.
+        cursor_img: Path to the cursor image.
+        client_name: Name of the client.
+        sync_port: Port for the synchronization with the server.
+        headless: Whether to run the client in headless mode.
+        display: value of the DISPLAY variable.
+
+    Returns:
+        The client process.
+    """
     cmd = [
         minetest_path,
         "--name",
@@ -164,7 +228,17 @@ def start_xserver(
     display_idx: int = 1,
     display_size: Tuple[int, int] = (1024, 600),
     display_depth: int = 24,
-):
+) -> subprocess.Popen:
+    """Start an X server.
+
+    Args:
+        display_idx: Value of the DISPLAY variable.
+        display_size: Size of the display.
+        display_depth: Depth of the display.
+
+    Returns:
+        The X server process.
+    """
     cmd = [
         "Xvfb",
         f":{display_idx}",

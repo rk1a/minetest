@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
+"""Test loop for Minetest environment."""
 from minetester import Minetest
-import os
 
 env = Minetest(
     seed=42,
@@ -12,7 +12,7 @@ env = Minetest(
     clientmods=["random_v0"],
 )
 
-render = True 
+render = True
 obs = env.reset()
 done = False
 while not done:
