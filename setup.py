@@ -1,6 +1,7 @@
 from setuptools import setup
 
 DEV = ["pre-commit", "black", "isort", "flake8"]
+DOCS = ["sphinx", "sphinx_rtd_theme", "sphinx-autobuild"]
 
 setup(
     name='Minetester',

@@ -1,14 +1,14 @@
 """Test loop with parallel Minetest environments."""
-import random
-from typing import Any, Dict, Optional
-
-from gym.wrappers import TimeLimit
-from stable_baselines3.common.vec_env import SubprocVecEnv
-
-from minetester import Minetest
-from minetester.utils import start_xserver
 
 if __name__ == "__main__":
+    import random
+    from typing import Any, Dict, Optional
+
+    from gym.wrappers import TimeLimit
+    from stable_baselines3.common.vec_env import SubprocVecEnv
+
+    from minetester import Minetest
+    from minetester.utils import start_xserver
 
     def _make_env(
         rank: int,
