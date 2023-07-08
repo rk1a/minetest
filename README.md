@@ -4,11 +4,11 @@ This is a fork of the Minetest Voxel Engine, designed to support an OAI gym like
 
 Modes of Operation
 ------------------
-The model provides 4 modes of operation for players and agents
-1. Asynchronous real time interaction for agents between client and server.
-2. Single agent synchronous interaction between a client and server
-3. Multi agent synchronous interaction between a client and server
-4. Real time recording of player actions
+The environment will eventually provide 4 modes of operation for players and agents
+1. Asynchronous real time interaction for agents between client and server. (WIP)
+2. Single agent synchronous interaction between a client and server (Done)
+3. Multi agent synchronous interaction between a client and server(WIP)
+4. Real time recording of player actions (WIP)
 
 
 Minetester
