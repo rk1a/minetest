@@ -1,6 +1,6 @@
 EleutherAI Alignment Minetest
 =============================
-This is a fork of the Minetest Voxel Engine, designed to support an OAI gym like environment. The library supports
+This is a fork of the Minetest Voxel Engine, designed to support an OAI gym like environment.
 
 Modes of Operation
 ------------------
