@@ -102,7 +102,6 @@ doc/mkdocs/mkdocs.yml
 build/
 build_headless/
 CMakeFiles
-Makefile
 cmake_install.cmake
 CMakeCache.txt
 CPackConfig.cmake
