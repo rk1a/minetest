@@ -15,19 +15,29 @@ Welcome to Minetester's documentation!
    quickstart/what_is_minetester
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
    :caption: Tutorials
 
    tutorials/create_task
    tutorials/play_task
    tutorials/train_RL_agent
 
-
 .. toctree::
-   :maxdepth: 2
-   :caption: Package Reference
+   :maxdepth: 1
+   :caption: Advanced Usage
 
-   modules
+   advanced/client_api
+
+
+Package Reference
+~~~~~~~~~~~~~~~~~
+.. autosummary::
+   :toctree: _api
+   :caption: Package Reference
+   :recursive:
+   :template: autosummary/module.rst
+
+   minetester
 
 
 Index
@@ -35,4 +45,3 @@ Index
 
 * :ref:`genindex`
 * :ref:`modindex`
-* :ref:`search`
