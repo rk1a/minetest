@@ -13,26 +13,44 @@ Welcome to Minetester's documentation!
 
    quickstart/installation
    quickstart/what_is_minetester
+   quickstart/hello_minetest
 
+.. _tutorials:
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
    :caption: Tutorials
 
+   tutorials/headless_mode
+   tutorials/synchronization
    tutorials/create_task
-   tutorials/play_task
    tutorials/train_RL_agent
 
+.. toctree::
+   :maxdepth: 1
+   :caption: Advanced Usage
+
+   advanced/client_api
+   advanced/building_source
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
+   :caption: Community
+
+   community/support
+   community/contributing
+
+Package Reference
+~~~~~~~~~~~~~~~~~
+.. autosummary::
+   :toctree: _api
    :caption: Package Reference
+   :recursive:
+   :template: autosummary/module.rst
 
-   modules
-
+   minetester
 
 Index
 =====
 
 * :ref:`genindex`
 * :ref:`modindex`
-* :ref:`search`

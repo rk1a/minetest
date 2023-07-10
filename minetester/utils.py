@@ -229,7 +229,7 @@ def start_xserver(
     display_size: Tuple[int, int] = (1024, 600),
     display_depth: int = 24,
 ) -> subprocess.Popen:
-    """Start an X server.
+    """Start a virtual framebuffer X server.
 
     Args:
         display_idx: Value of the DISPLAY variable.

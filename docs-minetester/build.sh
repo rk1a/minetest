@@ -1,1 +1,1 @@
-sphinx-apidoc -o ./source  ../minetester ../minetester/proto -M
+sphinx-apidoc -o ./source  ../minetester ../minetester/proto

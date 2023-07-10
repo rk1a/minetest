@@ -23,6 +23,7 @@ sys.path.insert(0, os.path.abspath('../minetester'))
 # ...
 extensions = [
     'sphinx.ext.autodoc',
+    'sphinx_autodoc_typehints',
     'sphinx.ext.napoleon',
     'sphinx_rtd_theme',
     'sphinx_autodoc_typehints',
