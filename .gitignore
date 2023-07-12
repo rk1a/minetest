@@ -54,6 +54,7 @@ newworld/
 ## Non-static Minetest directories or symlinks to these
 /bin/
 /games/*
+!/games/minetest_game/
 !/games/devtest/
 /cache
 /textures/*
