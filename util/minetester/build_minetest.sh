@@ -1,9 +1,7 @@
-
 ROOT=$(pwd)
 
-mkdir build
-mkdir build/normal
-mkdir build/headless
+mkdir -p build/normal
+mkdir -p build/headless
 
 cd build/headless
 
