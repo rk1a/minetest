@@ -22,7 +22,7 @@ The most important directories are these:
 Executing Minetest
 ------------------
 
-You can jump directly into the game (skipping the main menu) by running
+You can jump directly into a single player game (skipping the main menu) by running
 
 .. code-block:: bash
 
@@ -59,9 +59,9 @@ Minetester command line options
    * - Minetester CLI Option
      - Description
    * - ``--dumb``
-     - Start a dumb client that can receive input from an external controller client.
+     - Start a dumb client that can receive actions from and return observations to an external controller client.
    * - ``--record``
-     - Start a recording client that outputs observations to an external data gathering client.
+     - Start a recording client that returns observations to an external data gathering client.
    * - ``--client-address``
      - Address to the controller / data gathering client.
    * - ``--headless``
@@ -75,7 +75,7 @@ Minetester command line options
    * - ``--cursor-image``
      - Path to cursor image file that is rendered at the mouse position in the dumb client mode.
 
-To get started the remainder of this guide focusses on connecting a **server**, a **dumb client** and the `builtin Python controller client wrapped as gymnasium environment. <../_api/minetester.minetest_env.html#minetester.minetest_env.Minetest>`_
+Below we focus on connecting a **server**, a **dumb client** and the `builtin Python controller client wrapped as gymnasium environment. <../_api/minetester.minetest_env.html#minetester.minetest_env.Minetest>`_
 
 To learn more about the other CLI options please refer to the :ref:`tutorials <tutorials>`.
 
@@ -86,28 +86,25 @@ After manually starting a server and a dumb client via
 
 .. code-block:: bash
 
-    ./bin/minetest --server
-    ./bin/minetest --name Bob --password whyisthisnecessary --address 0.0.0.0 --port 30000 --go --dumb --record --client-address "tcp://localhost:5555"
+    # remember how a server is started internally in singleplayer?
+    ./bin/minetest --go --dumb --client-address "tcp://localhost:5555"
 
 
 you can use :py:class:`minetester.minetest_env.Minetest` as a Python controller client, e.g. by running the following script:
 
-.. code-block:: python
+.. literalinclude:: random_controller_loop.py
+   :language: python
+   :linenos:
 
-    from minetester import Minetest
+You should see two windows pop up: one from the Minetest client and one from the Python controller rendering the received observations.
 
-    mt = Minetest(seed=0, start_minetest=False)
-    mt.reset()
+.. note::
 
-    while True:
-        action = mt.action_space.sample()
-        mt.step(action)
-        mt.render()
+  By default ``start_minetest=True`` such that server and dumb client are started automatically as subprocesses.
 
-
-By default ``start_minetest=True`` such that server and dumb client are started automatically.
-
-Further Resources
------------------
+Further resources about Minetest
+--------------------------------
 
 - `minetest.net <https://minetest.net>`_
+- `Minetest Wiki <https://wiki.minetest.net>`_
+- `Minetest Forum <https://forum.minetest.net>`_
