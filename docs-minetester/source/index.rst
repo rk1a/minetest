@@ -23,7 +23,6 @@ Welcome to Minetester's documentation!
    tutorials/headless_mode
    tutorials/synchronization
    tutorials/create_task
-   tutorials/train_RL_agent
 
 .. toctree::
    :maxdepth: 1

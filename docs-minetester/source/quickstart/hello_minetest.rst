@@ -59,9 +59,9 @@ Minetester command line options
    * - Minetester CLI Option
      - Description
    * - ``--dumb``
-     - Start a dumb client that needs to connect to an external controller client.
+     - Start a dumb client that can receive input from an external controller client.
    * - ``--record``
-     - Start a recording client that needs to connect to an external data gathering client.
+     - Start a recording client that outputs observations to an external data gathering client.
    * - ``--client-address``
      - Address to the controller / data gathering client.
    * - ``--headless``
@@ -82,13 +82,30 @@ To learn more about the other CLI options please refer to the :ref:`tutorials <t
 Sending random actions
 ----------------------
 
-TODO
+After manually starting a server and a dumb client via
 
-There are a few useful scripts to start servers and clients with a default configuration file.
+.. code-block:: bash
 
-- how to start a client and a server
-- how to start a dumb client and connect the gym environment
+    ./bin/minetest --server
+    ./bin/minetest --name Bob --password whyisthisnecessary --address 0.0.0.0 --port 30000 --go --dumb --record --client-address "tcp://localhost:5555"
 
+
+you can use :py:class:`minetester.minetest_env.Minetest` as a Python controller client, e.g. by running the following script:
+
+.. code-block:: python
+
+    from minetester import Minetest
+
+    mt = Minetest(seed=0, start_minetest=False)
+    mt.reset()
+
+    while True:
+        action = mt.action_space.sample()
+        mt.step(action)
+        mt.render()
+
+
+By default ``start_minetest=True`` such that server and dumb client are started automatically.
 
 Further Resources
 -----------------

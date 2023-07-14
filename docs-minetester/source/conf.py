@@ -30,6 +30,7 @@ extensions = [
     'sphinx.ext.viewcode',
     'sphinx_copybutton',
     'sphinx.ext.autosummary',
+    'myst_parser',
 ]
 # ...
 napoleon_google_docstring = True
@@ -40,6 +41,11 @@ autodoc_default_options = {
     "undoc-members": True,
     "special-members": "__init__",
     "show-inheritance": True,
+}
+source_suffix = {
+    ".rst": "restructuredtext",
+    ".txt": "markdown",
+    ".md": "markdown",
 }
 
 # -- Options for HTML output -------------------------------------------------
