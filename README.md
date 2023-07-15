@@ -22,6 +22,20 @@ To verify the installation run
 ```
 python -m minetester.scripts.test_loop
 ```
+Quick build instructions for linux
+```bash
+make deb_deps #install debian dependencies, equivalent commands are nessesary for other distros
+make python_build_deps #install build dependencies into the local python environment (we reccomend using a venv)
+make repos #init submodules
+make sdl2 #build sdl2
+make zmqpp #build zmqpp
+make proto #create c++ and python protobuf files
+make minetest #build minetest binary
+make minetester #build minetester python library
+make install #install python library into local environment along with nessesary dependencies
+make demo #run the demo script
+make clean #clean up build artifacts
+```
 
 Minetest
 ========
