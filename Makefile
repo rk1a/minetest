@@ -13,41 +13,50 @@ deb_deps:
 	util/minetester/install_deps.sh
 
 python_build_deps:
+	# Install python build dependencies
 	pip install -r build_requirements.txt
 
 repos:
 	# Init all submodules
 	git submodule update --init --recursive
 
-$(SDL2_CMAKE_FILE): repos
+$(SDL2_CMAKE_FILE):
 	# compile sdl2
 	util/minetester/build_sdl2.sh
 
 sdl2: $(SDL2_CMAKE_FILE)
 
 proto:
+	#create protobuf c++ and python files
 	util/minetester/compile_proto.sh
 
-$(ZMQPP_LIB_FILE): repos
+$(ZMQPP_LIB_FILE):
 	#compile zmqpp
 	util/minetester/build_zmqpp.sh
 
 zmqpp: $(ZMQPP_LIB_FILE)
 
 
-$(MINETEST_BINARY): repos sdl2 zmqpp proto
+$(MINETEST_BINARY):
+	#build minetest binary
 	util/minetester/build_minetest.sh
 
 minetest: $(MINETEST_BINARY)
 
-minetester:
+$(MINETESTER_WHEEL):
+	#build minetester python library
 	util/minetester/build_minetester.sh
 
+minetester: $(MINETESTER_WHEEL)
+
 install:
+	#install python library
 	pip install $(MINETESTER_WHEEL)
 
 demo:
+	#install run demo script
 	python -m minetester.scripts.test_loop
 
 clean:
+	#clean up repo
 	util/minetester/clean.sh
