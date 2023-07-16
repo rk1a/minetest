@@ -1,4 +1,4 @@
-Building Minetester from source
+Manual build from source
 ===============================
 
 .. literalinclude:: ../../../build_instructions.txt

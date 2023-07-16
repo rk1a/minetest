@@ -82,7 +82,7 @@ To learn more about the other CLI options please refer to the :ref:`tutorials <t
 Sending random actions
 ----------------------
 
-After manually starting a server and a dumb client via
+Let's manually start a server and a dumb client via
 
 .. code-block:: bash
 
@@ -90,13 +90,14 @@ After manually starting a server and a dumb client via
     ./bin/minetest --go --dumb --client-address "tcp://localhost:5555"
 
 
-you can use :py:class:`minetester.minetest_env.Minetest` as a Python controller client, e.g. by running the following script:
+We can set up a little Python script that acts as controller client using :py:class:`minetester.minetest_env.Minetest`.
 
 .. literalinclude:: random_controller_loop.py
    :language: python
    :linenos:
 
-You should see two windows pop up: one from the Minetest client and one from the Python controller rendering the received observations.
+Make sure to provide matching ports in ``--client-address`` and ``env_port`` for connecting to the Minetest client.
+Running this script should pop up two windows: one from the Minetest client and one from the Python controller rendering a randomly acting player.
 
 .. note::
 

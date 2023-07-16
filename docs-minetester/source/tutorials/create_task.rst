@@ -4,7 +4,6 @@ How to create a new task?
 Tasks are easy to create using Minetest's builtin Lua modding API. 
 The task-relevant information (rewards, task completion status, meta information, ...) are passed through the Minetest processes and made available to the `client API <client_api.html>`_.
 
-
 Task definition
 ---------------
 
@@ -18,70 +17,65 @@ A basic Minetest mod is defined by a directory with the following structure
         settingtypes.txt
 
 where `mod.conf` contains meta data, `init.lua` the necessary Lua code, and `settingtypes.txt` possible mod settings.
+It is either located in  the **clientmods** or the **mods** directory (see :ref:`below <client_server_mods>`).
 
-A task has to define two global variables in the Lua script environment:
+A task has to define or modify the following two global variables in the Lua script environment:
 
-1. `REWARD`: a scalar floting point number indicating the reward received at the current step.
-2. `TERMINAL`: a boolean indicating whether the agent has reached a terminal state of the task.
+1. ``REWARD``: a scalar floting point number indicating the reward received at the current step.
+2. ``TERMINAL``: a boolean indicating whether the agent has reached a terminal state of the task.
 
 The variables can be changed at every step, or based on in-game events.
+
+.. note:: 
+
+    In order to avoid multiple definitions of ``REWARD`` and ``TERMINAL`` when using multiple task mods together,
+    there is a default mod called **rewards** (see `client-side <https://github.com/EleutherAI/minetest/tree/develop/clientmods/rewards>`_,
+    `server-side <https://github.com/EleutherAI/minetest/tree/develop/mods/rewards>`_) that takes care of the definition. If a mod with this name is found,
+    it will be automatically loaded.
 
 Example: A simple treechop task
 -------------------------------
 
+The following files define a simple task, ``treechop-v0``, that rewards chopping trees and terminates after
+a certain number of tree nodes have been chopped.
+
 `mod.conf`
 
-.. literalinclude :: ../../../mods/treechop_v2/mod.conf
+.. literalinclude :: ../../../clientmods/treechop_v0/mod.conf
     :language: text
+    :linenos:
 
 `settingtypes.txt`
 
-.. literalinclude :: ../../../mods/treechop_v2/settingtypes.txt
+.. literalinclude :: ../../../clientmods/treechop_v0/settingtypes.txt
     :language: text
+    :linenos:
 
 `ìnit.lua`
 
-.. literalinclude :: ../../../mods/treechop_v2/init.lua
+.. literalinclude :: ../../../clientmods/treechop_v0/init.lua
     :language: lua
+    :linenos:
 
+.. _client_server_mods:
 
-.. code-block:: lua
+Client and server mods
+----------------------
 
-    -- task settings
-    TREECHOP_GOAL = minetest.settings:get("treechop_goal") or 10
+Minetest provides two mod types, client-side mods located in the **clientmods** directory and server-side mods located in **mods**.
 
-    minetest.register_on_dignode(function(pos, node, digger)
-        if string.find(node["name"], "tree") then
-            minetest.debug("Dug a tree!")
-            REWARD[digger:get_player_name()] = 1.0
-        end
+In the default, asynchronous client-server operation tasks are specified as client-side mods, meaning each client
+tracks its own reward and task termination variables.
+One downside of client-side mods is that they don't have access to all information that is available on the server-side,
+e.g. the inventory of the player.
+In order to still obtain this information one can have an additional server-side mod and make use of so-called mod channels
+to communicate the required data (see ``treechop-v1``: `client-side <https://github.com/EleutherAI/minetest/tree/develop/clientmods/treechop_v1>`_,
+`server-side <https://github.com/EleutherAI/minetest/tree/develop/mods/treechop_v1>`_).
 
-        -- count the number of tree items of digging player
-        local num_tree_items = 0
-        local inv = digger:get_inventory()
-        local size = inv:get_size("main")
-        for i = 1, size do
-            local stack = inv:get_stack("main", i)
-            if string.find(stack:get_name(), "tree") then
-                    num_tree_items = num_tree_items + stack:get_count()
-            end
-        end
-        if num_tree_items >= TREECHOP_GOAL then
-                minetest.debug(digger:get_player_name() .. " reached the goal!")
-                TERMINAL[digger:get_player_name()] = true
-        end
-    end)
-
-
-Asynchronous mode and client mods
----------------------------------
-
-Currently, server mods can only be used to modify the Minetester global variables if client-server synchronization is active.
-Otherwise, a client mod has to be used instead.
-Client mods have certain limitations to what information they can access. 
-For example, there is no acces to a player's inventory.
-To circumvent these limitations, one can use a pair of mods (one client and one server mod) that establish a mod channel between them to share the missing information.
-However, it is recommended to use client-server synchronization with a single server mod where possible.
+On the other hand, when using `client-server synchronization <synchronization.html>`_, task data is distributed to the client
+via the synchronization channel, such that **it is required** to exclusively use server mods for the task definition.
+In this case, ``REWARD`` and ``TERMINAL`` are each tables of floats and booleans, respectively, containing values for each player name
+(see ``treechop-v2``: `server-side only <https://github.com/EleutherAI/minetest/tree/develop/mods/treechop_v2>`_) 
 
 Further resources
 -----------------
