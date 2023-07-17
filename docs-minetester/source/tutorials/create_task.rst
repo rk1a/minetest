@@ -2,7 +2,8 @@ How to create a new task?
 ================================
 
 Tasks are easy to create using Minetest's builtin Lua modding API. 
-The task-relevant information (rewards, task completion status, meta information, ...) are passed through the Minetest processes and made available to the `client API <client_api.html>`_.
+The task-relevant information (rewards, task completion status, meta information, ...) are passed through
+the Minetest processes and made available to the `client API <../advanced/client_api.html>`_.
 
 Task definition
 ---------------
@@ -21,7 +22,7 @@ It is either located in  the **clientmods** or the **mods** directory (see :ref:
 
 A task has to define or modify the following two global variables in the Lua script environment:
 
-1. ``REWARD``: a scalar floting point number indicating the reward received at the current step.
+1. ``REWARD``: a scalar floating point number indicating the reward received at the current step.
 2. ``TERMINAL``: a boolean indicating whether the agent has reached a terminal state of the task.
 
 The variables can be changed at every step, or based on in-game events.
@@ -29,8 +30,8 @@ The variables can be changed at every step, or based on in-game events.
 .. note:: 
 
     In order to avoid multiple definitions of ``REWARD`` and ``TERMINAL`` when using multiple task mods together,
-    there is a default mod called **rewards** (see `client-side <https://github.com/EleutherAI/minetest/tree/develop/clientmods/rewards>`_,
-    `server-side <https://github.com/EleutherAI/minetest/tree/develop/mods/rewards>`_) that takes care of the definition. If a mod with this name is found,
+    there is a default mod called **rewards** (see `client-side rewards mod <https://github.com/EleutherAI/minetest/tree/develop/clientmods/rewards>`_,
+    `server-side rewards mod <https://github.com/EleutherAI/minetest/tree/develop/mods/rewards>`_) that takes care of the definition. If a mod with this name is found,
     it will be automatically loaded.
 
 Example: A simple treechop task

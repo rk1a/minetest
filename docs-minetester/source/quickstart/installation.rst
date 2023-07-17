@@ -1,16 +1,9 @@
 Installation
 ============
 
-For normal usage it suffices to install pre-built binaries via pip:
+Follow the build instructions:
 
-.. code-block:: bash
-
-    pip install minetester
-
-Verify your installation by running
-
-.. code-block:: bash
-
-    python -m minetester.scripts.test_loop
+.. literalinclude:: ../../../build_instructions.txt
+    :language: text
 
 You should see a window pop up with a player performing random actions in Minetest.

@@ -29,7 +29,6 @@ Welcome to Minetester's documentation!
    :caption: Advanced Usage
 
    advanced/client_api
-   advanced/building_source
 
 .. toctree::
    :maxdepth: 1

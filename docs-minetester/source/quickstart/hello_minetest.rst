@@ -75,7 +75,7 @@ Minetester command line options
    * - ``--cursor-image``
      - Path to cursor image file that is rendered at the mouse position in the dumb client mode.
 
-Below we focus on connecting a **server**, a **dumb client** and the `builtin Python controller client wrapped as gymnasium environment. <../_api/minetester.minetest_env.html#minetester.minetest_env.Minetest>`_
+Below we focus on connecting a **server**, a **dumb client** and `Minetester's gymnasium environment. <../_api/minetester.minetest_env.html#minetester.minetest_env.Minetest>`_
 
 To learn more about the other CLI options please refer to the :ref:`tutorials <tutorials>`.
 
@@ -90,7 +90,8 @@ Let's manually start a server and a dumb client via
     ./bin/minetest --go --dumb --client-address "tcp://localhost:5555"
 
 
-We can set up a little Python script that acts as controller client using :py:class:`minetester.minetest_env.Minetest`.
+We can set up a little Python script that acts as controller client using :py:class:`minetester.minetest_env.Minetest`,
+which implements the gymnasium environment interface.
 
 .. literalinclude:: random_controller_loop.py
    :language: python
