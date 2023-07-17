@@ -26,7 +26,6 @@ extensions = [
     'sphinx_autodoc_typehints',
     'sphinx.ext.napoleon',
     'sphinx_rtd_theme',
-    'sphinx_autodoc_typehints',
     'sphinx.ext.viewcode',
     'sphinx_copybutton',
     'sphinx.ext.autosummary',

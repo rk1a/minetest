@@ -33,3 +33,5 @@ There are two differnt ZeroMQ messaging patterns in use depending on the type of
   subscribes to the topic in order to read out the observations.
   See `this script <https://github.com/EleutherAI/minetest/blob/develop/scripts/data_recorder.py>`_
   for an example of how to implement a data gathering client.
+
+In both cases the ZMQ socket address is passed to the Minetest client via the ``--client-address`` command line argument.

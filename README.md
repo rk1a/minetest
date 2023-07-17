@@ -15,12 +15,17 @@ Minetester
 ==========
 Minetester is the Python package that exposes Minetest environments via the `gym(nasium)` interface.
 After [building the minetest executable](https://github.com/EleutherAI/minetest/blob/develop/build_instructions.txt) you can install it with:
-```
+``` bash
 pip install -e .
 ```
 To verify the installation run
-```
+``` bash
 python -m minetester.scripts.test_loop
+```
+To build the documentation in `docs-minetester` please run
+``` bash
+pip install -e .[docs]
+cd docs-minetester && make livehtml
 ```
 
 Minetest

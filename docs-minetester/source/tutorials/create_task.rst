@@ -69,7 +69,7 @@ In the default, asynchronous client-server operation tasks are specified as clie
 tracks its own reward and task termination variables.
 One downside of client-side mods is that they don't have access to all information that is available on the server-side,
 e.g. the inventory of the player.
-In order to still obtain this information one can have an additional server-side mod and make use of so-called mod channels
+In order to still obtain this information one can have an additional server-side mod and make use of so-called **mod channels**
 to communicate the required data (see ``treechop-v1``: `client-side <https://github.com/EleutherAI/minetest/tree/develop/clientmods/treechop_v1>`_,
 `server-side <https://github.com/EleutherAI/minetest/tree/develop/mods/treechop_v1>`_).
 

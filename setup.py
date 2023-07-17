@@ -1,7 +1,14 @@
 from setuptools import setup
 
 DEV = ["pre-commit", "black", "isort", "flake8"]
-DOCS = ["sphinx", "sphinx_rtd_theme", "sphinx-autobuild"]
+DOCS = [
+    "sphinx==6.2.1",
+    "sphinx_rtd_theme==1.2.2",
+    "sphinx-autobuild",
+    "sphinx_autodoc_typehints",
+    "sphinx_copybutton",
+    "myst_parser",
+]
 
 setup(
     name='Minetester',
@@ -18,5 +25,5 @@ setup(
         'protobuf==3.20.1',
         'psutil',
     ],
-    extras_require={"dev": DEV}
+    extras_require={"dev": DEV, "docs": DOCS}
 )
