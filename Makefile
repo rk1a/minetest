@@ -62,4 +62,5 @@ clean:
 	util/minetester/clean.sh
 
 clean_minetester:
+	#clean up minetester, but not minetest
 	util/minetester/clean_minetester.sh

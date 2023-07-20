@@ -43,6 +43,15 @@ make demo #run the demo script
 make clean #clean up build artifacts
 ```
 
+Additionally the makefile supports a utility to clean only the minetester install
+
+```
+make clean_minetester #remove existing minetester install
+make minetester #build minetester python library
+make install #install python library into local environment along with nessesary dependencies
+make demo #run the demo script
+```
+
 Minetest
 ========
 
