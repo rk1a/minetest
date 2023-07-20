@@ -532,10 +532,6 @@ set(client_SRCS
 	${proto_targets}
 )
 
-if (CMAKE_VERSION VERSION_GREATER 3.8.1)
-
-endif()
-
 include_directories(
 	${PROJECT_BINARY_DIR}
 	${PROJECT_SOURCE_DIR}
