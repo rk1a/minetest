@@ -8,7 +8,7 @@ setup(
     author_email='',
     packages=['minetester'],
     install_requires=[
-        'gym',
+        'gymnasium',
         'numpy',
         'matplotlib',
         'zmq',
