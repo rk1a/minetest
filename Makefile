@@ -51,7 +51,7 @@ minetester: $(MINETESTER_WHEEL)
 
 install:
 	#install python library
-	pip install $(MINETESTER_WHEEL)
+	pip install $(MINETESTER_WHEEL) --force-reinstall
 
 demo:
 	#install run demo script
@@ -60,3 +60,7 @@ demo:
 clean:
 	#clean up repo
 	util/minetester/clean.sh
+
+clean_minetester:
+	#clean up minetester, but not minetest
+	util/minetester/clean_minetester.sh
