@@ -29,7 +29,7 @@ class Minetest(gym.Env):
         env_port: int = 5555,
         server_port: int = 30000,
         minetest_root: Optional[os.PathLike] = None,
-        artifact_dir: Optional[os.PathLike] = None,
+        artefact_dir: Optional[os.PathLike] = None,
         world_dir: Optional[os.PathLike] = None,
         config_path: Optional[os.PathLike] = None,
         display_size: Tuple[int, int] = default_display_size,
@@ -60,7 +60,7 @@ class Minetest(gym.Env):
         self._configure_obs_space()
 
         # Define Minetest paths
-        self._set_artifact_dirs(artifact_dir, world_dir, config_path, config_dict) #Stores minetest artifacts and outputs
+        self._set_artefact_dirs(artefact_dir, world_dir, config_path, config_dict) #Stores minetest artefacts and outputs
         self._set_minetest_folders(minetest_root) #Stores actual minetest dirs and executable
 
         # Whether to start minetest server and client
@@ -165,11 +165,11 @@ class Minetest(gym.Env):
         if self.minetest_root is None: 
             #check for package install
             try:
-                candiate_mintest_executable = pkg_resources.resource_filename("__name__","bin.minetest")
-                if os.path.is_file(candiate_mintest_executable):
-                    self.mintest_root = os.path.dirname(os.path.dirname(candiate_mintest_executable))
+                candiate_minetest_executable = pkg_resources.resource_filename(__name__,os.path.join("minetest","bin","minetest"))
+                if os.path.isfile(candiate_minetest_executable):
+                    self.minetest_root = os.path.dirname(os.path.dirname(candiate_minetest_executable))
             except Exception as e:
-                print(f"Error loading resource file '{filename}': {e}")
+                logging.warning(f"Error loading resource file 'bin.minetest': {e}")
         
         if self.minetest_root is None:
             raise Exception("Unable to locate minetest executable")
@@ -182,28 +182,28 @@ class Minetest(gym.Env):
             "mouse_cursor_white_16x16.png",
         )
     
-    def _set_artifact_dirs(self, artifact_dir, world_dir, config_path, config_dict):
-        if artifact_dir is None:
-            self.artifact_dir = os.path.join(os.getcwd(), "artifacts")
+    def _set_artefact_dirs(self, artefact_dir, world_dir, config_path, config_dict):
+        if artefact_dir is None:
+            self.artefact_dir = os.path.join(os.getcwd(), "artefacts")
         else:
-            self.artifact_dir = artifact_dir
+            self.artefact_dir = artefact_dir
 
         if config_path is None:
             self.clean_config = True
-            self.config_path = os.path.join(self.artifact_dir, f"{self.unique_env_id}.conf")
+            self.config_path = os.path.join(self.artefact_dir, f"{self.unique_env_id}.conf")
         else:
             self.clean_config = True
             self.config_path = config_path
         
         if world_dir is None:
             self.reset_world = True 
-            self.world_dir = os.path.join(self.artifact_dir, self.unique_env_id)
+            self.world_dir = os.path.join(self.artefact_dir, self.unique_env_id)
         else:
             self.reset_world = False
             self.world_dir = world_dir
 
-        self.log_dir = os.path.join(self.artifact_dir, "log")
-        self.media_cache_dir = os.path.join(self.artifact_dir, "media_cache")
+        self.log_dir = os.path.join(self.artefact_dir, "log")
+        self.media_cache_dir = os.path.join(self.artefact_dir, "media_cache")
 
         os.makedirs(self.log_dir, exist_ok=True)
         os.makedirs(self.media_cache_dir, exist_ok=True)
