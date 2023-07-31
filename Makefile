@@ -4,16 +4,17 @@ MINETESTER_VERSION := 0.0.1
 SDL2_CMAKE_FILE := lib/SDL/build/lib/cmake/SDL2/sdl2-config.cmake
 ZMQPP_LIB_FILE := lib/zmqpp/build/max-g++/libzmqpp.a
 MINETEST_BINARY := bin/minetest
-MINETESTER_WHEEL := build/package/wheel/minetester-$(MINETESTER_VERSION)-py3-none-manylinux_2_35_x86_64.whl
+MINETESTER_WHEEL := build/package/wheel/minetester-$(MINETESTER_VERSION)-py3-none-any.whl
 
 default: minetest 
 
-deb_deps:
+linux_deps:
 	# Install debian dependencies
 	util/minetester/install_deps.sh
 
 python_build_deps:
 	# Install python build dependencies
+	pip install --upgrade pip
 	pip install -r build_requirements.txt
 
 repos:
