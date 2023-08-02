@@ -18,6 +18,7 @@ from minetester.utils import (
     start_xserver,
 )
 
+import pkg_resources
 
 class Minetest(gym.Env):
     metadata = {"render.modes": ["rgb_array", "human"]}
@@ -27,16 +28,16 @@ class Minetest(gym.Env):
         self,
         env_port: int = 5555,
         server_port: int = 30000,
-        minetest_executable: Optional[os.PathLike] = None,
-        log_dir: Optional[os.PathLike] = None,
-        config_path: Optional[os.PathLike] = None,
-        cursor_image_path: Optional[os.PathLike] = None,
+        minetest_root: Optional[os.PathLike] = None,
+        artefact_dir: Optional[os.PathLike] = None,
         world_dir: Optional[os.PathLike] = None,
+        config_path: Optional[os.PathLike] = None,
         display_size: Tuple[int, int] = default_display_size,
         fov: int = 72,
         seed: Optional[int] = None,
         start_minetest: bool = True,
         game_id: str = "minetest",
+        client_name: str = "minetester",
         clientmods: List[str] = [],
         servermods: List[str] = [],
         config_dict: Dict[str, Any] = {},
@@ -47,62 +48,20 @@ class Minetest(gym.Env):
         x_display: Optional[int] = None,
     ):
         self.unique_env_id = str(uuid.uuid4())
+        
+        # Seed the environment
+        if seed is not None:
+            self.seed(seed)
 
         # Graphics settings
-        self.headless = headless
-        self.display_size = display_size
-        self.fov_y = fov
-        self.fov_x = self.fov_y * self.display_size[0] / self.display_size[1]
+        self._set_graphics(headless, display_size, fov) 
 
         # Define action and observation space
-        self.max_mouse_move_x = self.display_size[0]
-        self.max_mouse_move_y = self.display_size[1]
-        self.action_space = gym.spaces.Dict(
-            {
-                **{key: gym.spaces.Discrete(2) for key in KEY_MAP.keys()},
-                **{
-                    "MOUSE": gym.spaces.Box(
-                        np.array([-self.max_mouse_move_x, -self.max_mouse_move_y]),
-                        np.array([self.max_mouse_move_x, self.max_mouse_move_y]),
-                        shape=(2,),
-                        dtype=int,
-                    ),
-                },
-            },
-        )
-        self.observation_space = gym.spaces.Box(
-            0,
-            255,
-            shape=(self.display_size[1], self.display_size[0], 3),
-            dtype=np.uint8,
-        )
+        self._configure_spaces()
 
         # Define Minetest paths
-        self.root_dir = os.path.dirname(os.path.dirname(__file__))
-        self.minetest_executable = minetest_executable
-        if minetest_executable is None:
-            self.minetest_executable = os.path.join(self.root_dir, "bin", "minetest")
-        if log_dir is None:
-            self.log_dir = os.path.join(self.root_dir, "log")
-        os.makedirs(self.log_dir, exist_ok=True)
-        self.world_dir = world_dir
-        self.config_path = config_path
-        self.cursor_image_path = cursor_image_path
-        if cursor_image_path is None:
-            self.cursor_image_path = os.path.join(
-                self.root_dir,
-                "cursors",
-                "mouse_cursor_white_16x16.png",
-            )
-
-        # Regenerate and clean world and config if no custom ones provided
-        self.reset_world = self.world_dir is None
-        self.clean_config = self.config_path is None
-        # If no custom world / config provided set folder / path based on UUID
-        if self.world_dir is None:
-            self.world_dir = os.path.join(self.root_dir, self.unique_env_id)
-        if self.config_path is None:
-            self.config_path = os.path.join(self.root_dir, f"{self.unique_env_id}.conf")
+        self._set_artefact_dirs(artefact_dir, world_dir, config_path, config_dict) #Stores minetest artefacts and outputs
+        self._set_minetest_dirs(minetest_root) #Stores actual minetest dirs and executable
 
         # Whether to start minetest server and client
         self.start_minetest = start_minetest
@@ -113,6 +72,9 @@ class Minetest(gym.Env):
         self.sync_port = sync_port  # MT client <-> MT server
 
         self.sync_dtime = sync_dtime
+
+        #Client Name
+        self.client_name = client_name 
 
         # ZMQ objects
         self.socket = None
@@ -126,10 +88,6 @@ class Minetest(gym.Env):
         self.last_obs = None
         self.render_fig = None
         self.render_img = None
-
-        # Seed the environment
-        if seed is not None:
-            self.seed(seed)
 
         # Configure logging
         logging.basicConfig(
@@ -154,10 +112,6 @@ class Minetest(gym.Env):
             self._enable_clientmods()
             self._enable_servermods()
 
-        # Write minetest.conf
-        self.config_dict = config_dict
-        self._write_config()
-
         # Start X server virtual frame buffer
         self.default_display = x_display or 0
         if "DISPLAY" in os.environ:
@@ -168,6 +122,95 @@ class Minetest(gym.Env):
         if self.start_xvfb:
             self.x_display = x_display or self.default_display + 4
             self.xserver_process = start_xserver(self.x_display, self.display_size)
+    
+    def _configure_spaces(self):
+        # Define action and observation space
+        self.max_mouse_move_x = self.display_size[0]
+        self.max_mouse_move_y = self.display_size[1]
+        self.action_space = gym.spaces.Dict(
+            {
+                **{key: gym.spaces.Discrete(2) for key in KEY_MAP.keys()},
+                **{
+                    "MOUSE": gym.spaces.Box(
+                        np.array([-self.max_mouse_move_x, -self.max_mouse_move_y]),
+                        np.array([self.max_mouse_move_x, self.max_mouse_move_y]),
+                        shape=(2,),
+                        dtype=int,
+                    ),
+                },
+            },
+        )
+        self.observation_space = gym.spaces.Box(
+            0,
+            255,
+            shape=(self.display_size[1], self.display_size[0], 3),
+            dtype=np.uint8,
+        )
+
+    def _set_graphics(self, headless, display_size, fov):
+        self.headless = headless
+        self.display_size = display_size
+        self.fov_y = fov
+        self.fov_x = self.fov_y * self.display_size[0] / self.display_size[1]
+
+    def _set_minetest_dirs(self, minetest_root):
+        self.minetest_root = minetest_root
+        if self.minetest_root is None:
+            #check for local install
+            candiate_minetest_root = os.path.dirname(os.path.dirname(__file__))
+            candiate_minetest_executable = os.path.join(os.path.dirname(os.path.dirname(__file__)),"bin","minetest")
+            if os.path.isfile(candiate_minetest_executable):
+                self.minetest_root = candiate_minetest_root
+
+        if self.minetest_root is None: 
+            #check for package install
+            try:
+                candiate_minetest_executable = pkg_resources.resource_filename(__name__,os.path.join("minetest","bin","minetest"))
+                if os.path.isfile(candiate_minetest_executable):
+                    self.minetest_root = os.path.dirname(os.path.dirname(candiate_minetest_executable))
+            except Exception as e:
+                logging.warning(f"Error loading resource file 'bin.minetest': {e}")
+        
+        if self.minetest_root is None:
+            raise Exception("Unable to locate minetest executable")
+        
+        self.minetest_executable = os.path.join(self.minetest_root,"bin","minetest")
+        
+        self.cursor_image_path = os.path.join(
+            self.minetest_root,
+            "cursors",
+            "mouse_cursor_white_16x16.png",
+        )
+    
+    def _set_artefact_dirs(self, artefact_dir, world_dir, config_path, config_dict):
+        if artefact_dir is None:
+            self.artefact_dir = os.path.join(os.getcwd(), "artefacts")
+        else:
+            self.artefact_dir = artefact_dir
+
+        if config_path is None:
+            self.clean_config = True
+            self.config_path = os.path.join(self.artefact_dir, f"{self.unique_env_id}.conf")
+        else:
+            self.clean_config = True
+            self.config_path = config_path
+        
+        if world_dir is None:
+            self.reset_world = True 
+            self.world_dir = os.path.join(self.artefact_dir, self.unique_env_id)
+        else:
+            self.reset_world = False
+            self.world_dir = world_dir
+
+        self.log_dir = os.path.join(self.artefact_dir, "log")
+        self.media_cache_dir = os.path.join(self.artefact_dir, "media_cache")
+
+        os.makedirs(self.log_dir, exist_ok=True)
+        os.makedirs(self.media_cache_dir, exist_ok=True)
+
+        # Write minetest.conf
+        self.config_dict = config_dict
+        self._write_config()
 
     def _enable_clientmods(self):
         clientmods_folder = os.path.realpath(
@@ -250,6 +293,8 @@ class Minetest(gym.Env):
             self.env_port,
             self.server_port,
             self.cursor_image_path,
+            self.client_name,
+            self.media_cache_dir,
             sync_port=self.sync_port,
             headless=self.headless,
             display=self.x_display,
