@@ -57,11 +57,11 @@ class Minetest(gym.Env):
         self._set_graphics(headless, display_size, fov) 
 
         # Define action and observation space
-        self._configure_obs_space()
+        self._configure_spaces()
 
         # Define Minetest paths
         self._set_artefact_dirs(artefact_dir, world_dir, config_path, config_dict) #Stores minetest artefacts and outputs
-        self._set_minetest_folders(minetest_root) #Stores actual minetest dirs and executable
+        self._set_minetest_dirs(minetest_root) #Stores actual minetest dirs and executable
 
         # Whether to start minetest server and client
         self.start_minetest = start_minetest
@@ -123,7 +123,7 @@ class Minetest(gym.Env):
             self.x_display = x_display or self.default_display + 4
             self.xserver_process = start_xserver(self.x_display, self.display_size)
     
-    def _configure_obs_space(self):
+    def _configure_spaces(self):
         # Define action and observation space
         self.max_mouse_move_x = self.display_size[0]
         self.max_mouse_move_y = self.display_size[1]
@@ -153,7 +153,7 @@ class Minetest(gym.Env):
         self.fov_y = fov
         self.fov_x = self.fov_y * self.display_size[0] / self.display_size[1]
 
-    def _set_minetest_folders(self, minetest_root):
+    def _set_minetest_dirs(self, minetest_root):
         self.minetest_root = minetest_root
         if self.minetest_root is None:
             #check for local install
