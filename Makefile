@@ -4,6 +4,7 @@ MINETESTER_VERSION := 0.0.1
 SDL2_CMAKE_FILE := lib/SDL/build/lib/cmake/SDL2/sdl2-config.cmake
 ZMQPP_LIB_FILE := lib/zmqpp/build/max-g++/libzmqpp.a
 MINETEST_BINARY := bin/minetest
+DEBUG_BINARY := bin/minetest_debug
 MINETESTER_WHEEL := build/package/wheel/minetester-$(MINETESTER_VERSION)-py3-none-any.whl
 
 default: minetest 
@@ -44,6 +45,11 @@ $(MINETEST_BINARY):
 
 minetest: $(MINETEST_BINARY)
 
+$(DEBUG_BINARY): 
+	util/minetester/build_debuggable_minetest.sh
+
+debug: $(DEBUG_BINARY)
+
 $(MINETESTER_WHEEL):
 	#build minetester python library
 	util/minetester/build_minetester.sh
@@ -57,6 +63,9 @@ install:
 demo:
 	#install run demo script
 	python -m minetester.scripts.test_loop
+
+ctags:
+	ctags --extras=+f -R --links=no .
 
 clean:
 	#clean up repo
