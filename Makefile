@@ -5,7 +5,7 @@ SDL2_CMAKE_FILE := lib/SDL/build/lib/cmake/SDL2/sdl2-config.cmake
 ZMQPP_LIB_FILE := lib/zmqpp/build/max-g++/libzmqpp.a
 MINETEST_BINARY := bin/minetest
 DEBUG_BINARY := bin/minetest_debug
-MINETESTER_WHEEL := build/package/wheel/minetester-$(MINETESTER_VERSION)-py3-none-any.whl
+MINETESTER_WHEEL := build/package/wheel/minetester-$(MINETESTER_VERSION)-py3-none-manylinux_2_35_x86_64.whl
 
 default: minetest 
 

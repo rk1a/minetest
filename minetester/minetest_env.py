@@ -381,7 +381,7 @@ class Minetest(gym.Env):
         byte_obs = self.socket.recv()
         obs, _, _, _, _ = unpack_pb_obs(byte_obs)
         self.last_obs = obs
-        logging.debug("Received first obs, obs: {}".format(obs))
+        logging.debug("Received first obs: {}".format(obs.shape))
         return obs
 
     def step(self, action: Dict[str, Any]):

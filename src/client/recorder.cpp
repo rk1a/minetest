@@ -44,7 +44,7 @@ void Recorder::setTerminal(bool & terminal) {
 void Recorder::sendObservation() {
     pb_objects::Observation obsToSend;
     obsToSend.set_reward(rewardToSend);
-	obsToSend.set_info(infoToSend);
+    obsToSend.set_info(infoToSend);
     obsToSend.set_terminal(terminalToSend);
     obsToSend.set_allocated_image(&imgToSend);
     obsToSend.set_allocated_action(&actionToSend);

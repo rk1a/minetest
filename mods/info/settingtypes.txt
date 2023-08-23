@@ -1,3 +1,0 @@
-#    Number of tree chops required for completing task
-#    Default is 10. At least one chop is required.
-treechop_goal (Tree chop goal) int 10 1 65535
