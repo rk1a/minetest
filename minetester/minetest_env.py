@@ -9,14 +9,10 @@ import gymnasium as gym
 import matplotlib.pyplot as plt
 import numpy as np
 import zmq
-from minetester.utils import (
-    KEY_MAP,
-    pack_pb_action,
-    start_minetest_client,
-    start_minetest_server,
-    unpack_pb_obs,
-    start_xserver,
-)
+
+from minetester.utils import (KEY_MAP, pack_pb_action, start_minetest_client,
+                              start_minetest_server, start_xserver,
+                              unpack_pb_obs)
 
 
 class Minetest(gym.Env):
@@ -340,7 +336,7 @@ class Minetest(gym.Env):
         byte_obs = self.socket.recv()
         obs, _, _, _, _ = unpack_pb_obs(byte_obs)
         self.last_obs = obs
-        logging.debug("Received first obs: {}".format(obs.shape))
+        logging.debug("Received first obs, obs: {}".format(obs))
         return obs
 
     def step(self, action: Dict[str, Any]):
@@ -365,7 +361,7 @@ class Minetest(gym.Env):
             assert action == last_action
 
         self.last_obs = next_obs
-        logging.debug(f"Received obs - {next_obs.shape}; reward - {rew}")
+        logging.debug(f"Received obs - {next_obs.shape}; reward - {rew}; info - {info}")
         return next_obs, rew, done, info
 
     def render(self, render_mode: str = "human"):

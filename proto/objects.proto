@@ -122,4 +122,5 @@ message Observation {
     float reward = 2;
     bool terminal = 3;
     Action action = 4;
+    string info = 5;
 }

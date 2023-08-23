@@ -1090,10 +1090,12 @@ void Server::SyncRunStep(bool initial_step)
 			std::string playername = m_clients.m_clients_names.at(0);
 			float reward = getReward(playername);
 			bool terminal = getTerminal(playername);
+			std::string info = getInfo(playername);
 			zmqpp::message syncMsg;
 			syncMsg << m_sync_dtime;
 			syncMsg << reward;
 			syncMsg << terminal;
+			syncMsg << info;
 			sync_socket->send(syncMsg);
 		}
 	}
@@ -2409,7 +2411,7 @@ void Server::SendSetLighting(session_t peer_id, const Lighting &lighting)
 {
 	NetworkPacket pkt(TOCLIENT_SET_LIGHTING,
 			4, peer_id);
-	
+
 	pkt << lighting.shadow_intensity;
 
 	Send(&pkt);
@@ -4694,6 +4696,29 @@ float Server::getReward(const std::string & playername) {
 		FATAL_ERROR(e.what());
 	}
     return reward;
+}
+
+
+std::string Server::getInfo(const std::string & playername) {
+	std::string info = "";
+	try {
+		if(m_script) {
+			lua_State *L = m_script->getStack();
+			// read out global INFO variable
+			lua_getglobal(L, "INFO"); // push global INFO value to stack
+			if (lua_istable(L, 1)) {
+				// get string of this player
+				getstringfield(L, 1, playername.c_str(), info);
+			}
+			// reset info value to the empty string
+			setstringfield(L, 1, playername.c_str(), "");
+			lua_pop(L, 1); // remove INFO table from stack
+		}
+	} catch(LuaError &e) {
+		errorstream << "No mod active!" << std::endl;
+		FATAL_ERROR(e.what());
+	}
+    return info;
 }
 
 
