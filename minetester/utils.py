@@ -78,14 +78,14 @@ def pack_pb_action(action: Dict[str, Any]):
 
 
 def start_minetest_server(
-    minetest_path: str = "bin/minetest",
-    config_path: str = "minetest.conf",
-    log_path: str = "log/{}.log",
-    server_port: int = 30000,
-    world_dir: str = "newworld",
-    sync_port: int = None,
-    sync_dtime: float = 0.001,
-    game_id: str = "minetest",
+    minetest_path: str,
+    config_path: str,
+    log_path: str,
+    server_port: int,
+    world_dir: str,
+    sync_port: int,
+    sync_dtime: float,
+    game_id: str,
 ):
     cmd = [
         minetest_path,
@@ -111,13 +111,14 @@ def start_minetest_server(
 
 
 def start_minetest_client(
-    minetest_path: str = "bin/minetest",
-    config_path: str = "minetest.conf",
-    log_path: str = "log/{}.log",
-    client_port: int = 5555,
-    server_port: int = 30000,
-    cursor_img: str = "cursors/mouse_cursor_white_16x16.png",
-    client_name: str = "MinetestAgent",
+    minetest_path: str,
+    config_path: str,
+    log_path: str,
+    client_port: int,
+    server_port: int,
+    cursor_img: str,
+    client_name: str,
+    media_cache_dir: str,
     sync_port: int = None,
     headless: bool = False,
     display: int = None,
@@ -140,6 +141,8 @@ def start_minetest_client(
         "--noresizing",
         "--config",
         config_path,
+        "--cache",
+        media_cache_dir,
     ]
     if headless:
         # don't render to screen

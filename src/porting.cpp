@@ -572,7 +572,7 @@ void migrateCachePath()
 	}
 }
 
-void initializePaths()
+void initializePaths(std::string media_cache_dir)
 {
 #if RUN_IN_PLACE
 	char buf[BUFSIZ];
@@ -615,7 +615,11 @@ void initializePaths()
 		path_share = execpath;
 		path_user  = execpath;
 	}
-	path_cache = path_user + DIR_DELIM + "cache";
+	if (!media_cache_dir.empty()) {
+		path_cache = media_cache_dir;
+	} else {
+		path_cache = path_user + DIR_DELIM + "cache";
+	}
 #else
 	infostream << "Using system-wide paths (NOT RUN_IN_PLACE)" << std::endl;
 
