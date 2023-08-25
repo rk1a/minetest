@@ -48,8 +48,7 @@ def unpack_pb_obs(received_obs: str):
     last_action = unpack_pb_action(pb_obs.action) if pb_obs.action else None
     rew = pb_obs.reward
     done = pb_obs.terminal
-    # TODO receive extra infos
-    info = {}
+    info = pb_obs.info
     return obs, rew, done, info, last_action
 
 

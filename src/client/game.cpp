@@ -1176,7 +1176,7 @@ bool Game::startup(bool *kill,
 				errorstream << "ZeroMQ error: " << e.what() << " (address: " << start_data.client_address << ")\n";
 				throw e;
 			};
-			
+
 			if (start_data.sync_port != "") {
 				// the dumb client is synchronized with the server (and other clients)
 				// via a REQ/REP pattern
@@ -1219,7 +1219,7 @@ bool Game::startup(bool *kill,
 				};
 			}
 		}
-		
+
 		// pass socket to dumb handler and recorder
 		if (start_data.isDumbClient()) {
 			dynamic_cast<DumbClientInputHandler*>(input)->socket = data_socket;
@@ -1272,10 +1272,11 @@ void Game::run()
 	while (m_rendering_engine->run()
 			&& !(*kill || g_gamecallback->shutdown_requested
 			|| (server && server->isShutdownRequested()))) {
-		
-		
+
+
 		float reward;
 		bool terminal;
+		std::string info;
 		if (sync_socket != nullptr) {
 			// send client is done signal to server
 			zmqpp::message syncDoneMsg;
@@ -1294,17 +1295,20 @@ void Game::run()
 			dtime = serverSyncMsg.get<f32>(0);
 			reward = serverSyncMsg.get<float>(1);
 			terminal = serverSyncMsg.get<bool>(2);
-		
+			info = serverSyncMsg.get<std::string>(3);
+
 			//warningstream << "Received dtime = " << std::to_string(dtime) << std::endl;
 		} else {
+			info = client->getInfo();
 			reward = client->getReward();
 			terminal = client->getTerminal();
 		}
-		
+
 		// send data out
 		std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
 		if(recorder && !firstIter) {
 			pb_objects::Image pb_img = client->getPixelData(input->getMousePos(), isMenuActive(), cursorImage);
+			recorder->setInfo(info);
 			recorder->setImage(pb_img);
 			recorder->setReward(reward);
 			recorder->setTerminal(terminal);
@@ -1313,7 +1317,7 @@ void Game::run()
 		std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
 		//warningstream << "Time difference = " << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() << "[µs]" << std::endl;
 
-		
+
 		const irr::core::dimension2d<u32> &current_screen_size =
 			m_rendering_engine->get_video_driver()->getScreenSize();
 		// Verify if window size has changed and save it if it's the case
@@ -1379,7 +1383,7 @@ void Game::run()
 				resumeAnimation();
 		}
 
-		
+
 		if (!m_is_paused)
 			step(dtime);
 		processClientEvents(&cam_view_target);

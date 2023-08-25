@@ -1,3 +1,10 @@
+/.venv
+/tags
+/tags.lock
+/tags.temp
+/*-*-*-*-*.conf
+/*-*-*-*-*/
+
 ## Editors and development environments
 *~
 *.swp

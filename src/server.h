@@ -400,6 +400,7 @@ public:
 
 	// RL framework
 	float getReward(const std::string & playername);
+	std::string getInfo(const std::string & playername);
 	bool getTerminal(const std::string & playername);
 private:
 	friend class EmergeThread;
