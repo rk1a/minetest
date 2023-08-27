@@ -59,8 +59,8 @@ class Minetest(gym.Env):
         self._configure_spaces()
 
         # Define Minetest paths
-        self._set_artefact_dirs(artefact_dir, world_dir, config_path, config_dict) #Stores minetest artefacts and outputs
-        self._set_minetest_dirs(minetest_root) #Stores actual minetest dirs and executable
+        self._set_artefact_dirs(artefact_dir, world_dir, config_path)  # Stores minetest artefacts and outputs
+        self._set_minetest_dirs(minetest_root)  # Stores actual minetest dirs and executable
 
         # Whether to start minetest server and client
         self.start_minetest = start_minetest
@@ -97,6 +97,10 @@ class Minetest(gym.Env):
         self.reseed_on_reset = world_seed is None
         self.seed(self.base_seed)
 
+        # Write minetest.conf
+        self.config_dict = config_dict
+        self._write_config()
+
         # Configure logging
         logging.basicConfig(
             filename=os.path.join(self.log_dir, f"env_{self.unique_env_id}.log"),
@@ -114,7 +118,7 @@ class Minetest(gym.Env):
             self.servermods += ["rewards"]  # require the server rewards mod
             self._enable_servermods()
         else:
-            self.clientmods += ["rewards"]  # require the client rewards mod
+            self.clientmods += ["rewards"]  # require the client rewards med
             # add client mod names in case they entail a server side component
             self.servermods += clientmods
             self._enable_clientmods()
@@ -190,7 +194,7 @@ class Minetest(gym.Env):
             "mouse_cursor_white_16x16.png",
         )
     
-    def _set_artefact_dirs(self, artefact_dir, world_dir, config_path, config_dict):
+    def _set_artefact_dirs(self, artefact_dir, world_dir, config_path):
         if artefact_dir is None:
             self.artefact_dir = os.path.join(os.getcwd(), "artefacts")
         else:
@@ -215,10 +219,6 @@ class Minetest(gym.Env):
 
         os.makedirs(self.log_dir, exist_ok=True)
         os.makedirs(self.media_cache_dir, exist_ok=True)
-
-        # Write minetest.conf
-        self.config_dict = config_dict
-        self._write_config()
 
     def _enable_clientmods(self):
         clientmods_folder = os.path.realpath(
@@ -371,15 +371,16 @@ class Minetest(gym.Env):
         config.update(self.config_dict)
         write_config_file(self.config_path, config)
 
-    def seed(self, seed: int):
-        self.rng = np.random.RandomState(seed)
+    def seed(self, seed: Optional[int] = None):
+        self._np_random = np.random.RandomState(seed or 0)
 
-    def reset(self):
+    def reset(self, seed: Optional[int] = None, options: Optional[Dict[str, Any]] = None):
+        self.seed(seed=seed)
         if self.start_minetest:
             if self.reset_world:
                 self._delete_world()
                 if self.reseed_on_reset:
-                    self.world_seed = self.rng.randint(np.iinfo(np.int64).max)
+                    self.world_seed = self._np_random.randint(np.iinfo(np.int64).max)
             self._enable_servermods()
             self._reset_minetest()
         self._reset_zmq()
@@ -390,7 +391,7 @@ class Minetest(gym.Env):
         obs, _, _, _, _ = unpack_pb_obs(byte_obs)
         self.last_obs = obs
         logging.debug("Received first obs: {}".format(obs.shape))
-        return obs
+        return obs, {}
 
     def step(self, action: Dict[str, Any]):
         # Send action
@@ -415,7 +416,7 @@ class Minetest(gym.Env):
 
         self.last_obs = next_obs
         logging.debug(f"Received obs - {next_obs.shape}; reward - {rew}; info - {info}")
-        return next_obs, rew, done, info
+        return next_obs, rew, done, False, {"info": info}
 
     def render(self, render_mode: str = "human"):
         if render_mode == "human":

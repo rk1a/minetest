@@ -1,8 +1,8 @@
 import random
 from typing import Any, Dict, Optional
 
-from gym.wrappers import TimeLimit
-from gym.vector import AsyncVectorEnv
+from gymnasium.wrappers import TimeLimit
+from gymnasium.vector import AsyncVectorEnv
 from minetester import Minetest
 from minetester.utils import start_xserver
 
@@ -23,7 +23,7 @@ if __name__ == "__main__":
             env = Minetest(
                 env_port=5555 + rank,
                 server_port=30000 + rank,
-                seed=seed + rank,
+                base_seed=seed + rank,
                 sync_port=30010 + rank,
                 **env_kwargs,
             )
@@ -59,14 +59,14 @@ if __name__ == "__main__":
     xserver = start_xserver(x_display)
 
     # Start loop
-    render = False
-    obs = venv.reset()
+    render = True
+    obs, _ = venv.reset()
     done = [False] * num_envs
     step = 0
     while step < max_steps:
         print(f"Elapsed steps: {venv.get_attr('_elapsed_steps')}")
         actions = venv.action_space.sample()
-        obs, rew, done, info = venv.step(actions)
+        obs, rew, done, _, info = venv.step(actions)
         if render:
             venv.call("render")
         step += 1
