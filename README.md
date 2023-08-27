@@ -1,26 +1,55 @@
 EleutherAI Alignment Minetest
 =============================
-This is a fork of the Minetest Voxel Engine, designed to support an OAI gym like environment. The library supports 
+This is a fork of the Minetest Voxel Engine, designed to support an OAI gym like environment.
 
 Modes of Operation
 ------------------
-The model provides 4 modes of operation for players and agents
-1. Asynchronous real time interaction for agents between client and server.
-2. Single agent synchronous interaction between a client and server
-3. Multi agent synchronous interaction between a client and server
-4. Real time recording of player actions
+The environment will eventually provide 4 modes of operation for players and agents
+1. Asynchronous real time interaction for agents between client and server. (WIP)
+2. Single agent synchronous interaction between a client and server (Done)
+3. Multi agent synchronous interaction between a client and server(WIP)
+4. Real time recording of player actions (WIP)
 
 
 Minetester
 ==========
 Minetester is the Python package that exposes Minetest environments via the `gym(nasium)` interface.
-After building the minetest executable you can install it with:
+After [building the minetest executable](https://github.com/EleutherAI/minetest/blob/develop/build_instructions.txt) you can install it with:
 ```
 pip install -e .
 ```
 To verify the installation run
 ```
 python -m minetester.scripts.test_loop
+```
+
+Quick Build Instructions for Linux
+==================================
+
+Run these make commands in order to build and install minetester. 
+If anything goes wrong during install, inspect the relevant entry/script in the Makefile to see what it's trying to do.
+
+```bash
+make deb_deps #install debian dependencies, equivalent commands are nessesary for other distros
+make python_build_deps #install build dependencies into the local python environment (we reccomend using a venv)
+make repos #init submodules
+make sdl2 #build sdl2
+make zmqpp #build zmqpp
+make proto #create c++ and python protobuf files
+make minetest #build minetest binary
+make minetester #build minetester python library
+make install #install python library into local environment along with nessesary dependencies
+make demo #run the demo script
+make clean #clean up build artifacts
+```
+
+Additionally the makefile supports a utility to clean only the minetester install
+
+```
+make clean_minetester #remove existing minetester install
+make minetester #build minetester python library
+make install #install python library into local environment along with nessesary dependencies
+make demo #run the demo script
 ```
 
 Minetest

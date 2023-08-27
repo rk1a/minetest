@@ -1848,7 +1848,7 @@ void Client::makeScreenshot()
 {
 	irr::video::IVideoDriver *driver = m_rendering_engine->get_video_driver();
 	irr::video::IImage* raw_image;
-	
+
 	if(m_rendering_engine->headless) {
 		raw_image = m_rendering_engine->get_screenshot();
 	} else {
@@ -1920,6 +1920,50 @@ void Client::makeScreenshot()
 	raw_image->drop();
 }
 
+std::string Client::getInfo() {
+	try {
+		ClientScripting *scr = getScript();
+		if (scr) {
+			lua_State *L = scr->getStack();
+			// read out global INFO variable
+			lua_getglobal(L, "INFO"); // push global OUT value to stack
+			// check if it is a string
+			if (!lua_isstring(L, lua_gettop(L)))
+        		errorstream << "`INFO' should be a string!" << std::endl;
+			// convert to string
+			size_t str_len = lua_objlen(L, lua_gettop(L));
+			std::string info(lua_tolstring(L, lua_gettop(L), &str_len));
+
+			// Get current time
+			auto now = std::chrono::high_resolution_clock::now();
+
+			// Convert to a time_t object
+			auto now_c = std::chrono::high_resolution_clock::to_time_t(now);
+
+			// Convert to local time
+			std::tm* now_tm = std::localtime(&now_c);
+
+			// Get the remaining fractional seconds (nanoseconds)
+			auto nanos = std::chrono::duration_cast<std::chrono::nanoseconds>(now.time_since_epoch() % std::chrono::seconds(1)).count();
+
+			// Format the time as a string
+			std::stringstream ss;
+			ss << std::put_time(now_tm, "%Y-%m-%d %H:%M:%S") << "." << std::setfill('0') << std::setw(9) << nanos;
+			std::string timestamp = ss.str();
+			warningstream << "[Client] Reading out INFO = " << info << "| " << timestamp <<  std::endl;
+			lua_pop(L, 1); // remove INFO value from stack
+			// reset global INFO to nil
+			lua_pushstring(L, ""); // push an empty string to the stack
+			lua_setglobal(L, "INFO"); // pop nil and assign to OUT
+			return info;
+		}
+	} catch(LuaError &e) {
+		errorstream << "No reward mod active!" << std::endl;
+		setFatalError(e);
+	}
+    return "";
+}
+
 float Client::getReward() {
 	float reward = 0.0;
 	try {
@@ -1988,7 +2032,7 @@ bool Client::getTerminal() {
 
 pb_objects::Image Client::getPixelData(core::position2di cursorPosition, bool isMenuActive, irr::video::IImage* cursorImage) {
 	irr::video::IVideoDriver *driver = m_rendering_engine->get_video_driver();
-	
+
 	irr::video::IImage* raw_image;
 	if(m_rendering_engine->headless) {
 		raw_image = m_rendering_engine->get_screenshot();
@@ -2009,7 +2053,7 @@ pb_objects::Image Client::getPixelData(core::position2di cursorPosition, bool is
 		const irr::video::SColor color = irr::video::SColor(255, 255, 255, 255);
 		cursorImage->copyToWithAlpha(image, cursorPosition, sourceRect, color, nullptr, true);
 	}
-	
+
 	auto dim = image->getDimension();
 	std::string imageData = std::string((char*)image->getData(), image->getImageDataSizeInBytes());
 	pb_objects::Image pb_img;

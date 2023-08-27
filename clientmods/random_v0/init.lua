@@ -2,4 +2,5 @@
 minetest.register_globalstep(function(dtime)
     REWARD = math.random()
     TERMINAL = math.floor(math.random() + 0.5) == 1
+	INFO = "hello world"
 end)
