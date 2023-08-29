@@ -176,3 +176,30 @@ def start_xserver(
     ]
     xserver_process = subprocess.Popen(cmd)
     return xserver_process
+
+
+def read_config_file(file_path):
+    config = {}
+    with open(file_path, 'r') as f:
+        for line in f:
+            line = line.strip()
+            if line and not line.startswith('#'):
+                key, value = line.split('=', 1)
+                key = key.strip()
+                value = value.strip()
+                if value.isdigit():
+                    value = int(value)
+                elif value.replace('.', '', 1).isdigit():
+                    value = float(value)
+                elif value.lower() == 'true':
+                    value = True
+                elif value.lower() == 'false':
+                    value = False
+                config[key] = value
+    return config
+
+
+def write_config_file(file_path, config):
+    with open(file_path, 'w') as f:
+        for key, value in config.items():
+            f.write(f'{key} = {value}\n')

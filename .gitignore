@@ -79,6 +79,7 @@ newworld/
 !/mods/rewards/
 !/mods/treechop_shaped_v*/
 /worlds
+/configs
 /world/
 /clientmods/*
 !/clientmods/rewards/

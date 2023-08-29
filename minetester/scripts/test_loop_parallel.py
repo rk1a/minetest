@@ -1,10 +1,10 @@
 import random
 from typing import Any, Dict, Optional
 
-from gym.wrappers import TimeLimit
+from gymnasium.wrappers import TimeLimit
+from gymnasium.vector import AsyncVectorEnv
 from minetester import Minetest
 from minetester.utils import start_xserver
-from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv
 
 if __name__ == "__main__":
 
@@ -23,11 +23,12 @@ if __name__ == "__main__":
             env = Minetest(
                 env_port=5555 + rank,
                 server_port=30000 + rank,
-                seed=seed + rank,
+                base_seed=seed + rank,
                 sync_port=30010 + rank,
                 **env_kwargs,
             )
-            env = TimeLimit(env, max_episode_steps=int(max_steps * random.random()))
+            # Assign random timelimit to check that resets work properly
+            env = TimeLimit(env, max_episode_steps=random.randint(max_steps // 2, max_steps))
             return env
 
         return _init
@@ -46,7 +47,7 @@ if __name__ == "__main__":
 
     # Create a vectorized environment
     num_envs = 2  # Number of envs to use (<= number of avail. cpus)
-    vec_env_cls = SubprocVecEnv  # DummyVecEnv
+    vec_env_cls = AsyncVectorEnv
     venv = vec_env_cls(
         [
             make_env(rank=i, seed=seed, max_steps=max_steps, env_kwargs=env_kwargs)
@@ -59,15 +60,15 @@ if __name__ == "__main__":
 
     # Start loop
     render = True
-    obs = venv.reset()
+    obs, _ = venv.reset()
     done = [False] * num_envs
     step = 0
     while step < max_steps:
         print(f"Elapsed steps: {venv.get_attr('_elapsed_steps')}")
-        actions = [venv.action_space.sample() for _ in range(num_envs)]
-        obs, rew, done, info = venv.step(actions)
+        actions = venv.action_space.sample()
+        obs, rew, done, _, info = venv.step(actions)
         if render:
-            venv.render()
+            venv.call("render")
         step += 1
     venv.close()
     xserver.terminate()

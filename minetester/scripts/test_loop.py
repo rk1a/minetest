@@ -4,7 +4,7 @@ import os
 from minetester import Minetest
 
 env = Minetest(
-    seed=42,
+    base_seed=42,
     start_minetest=True,
     sync_port=30010,
     sync_dtime=0.05,
@@ -15,12 +15,12 @@ env = Minetest(
 )
 
 render = True
-obs = env.reset()
+obs, _ = env.reset()
 done = False
 while not done:
     try:
         action = env.action_space.sample()
-        obs, rew, done, info = env.step(action)
+        obs, rew, done, _, info = env.step(action)
         print(rew, done, info)
         if render:
             env.render()
