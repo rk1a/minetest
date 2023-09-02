@@ -158,6 +158,12 @@ def start_minetest_client(
         client_env = os.environ.copy()
         if display is not None:
             client_env["DISPLAY"] = ":" + str(display)
+        # enable GPU usage
+        client_env["__GLX_VENDOR_LIBRARY_NAME"] = "nvidia"
+        client_env["__NV_PRIME_RENDER_OFFLOAD"] = "1"
+        # disable vsync
+        client_env["__GL_SYNC_TO_VBLANK"] = "0"
+        client_env["vblank_mode"] = "0"
         client_process = subprocess.Popen(cmd, stdout=out, stderr=err, env=client_env)
     return client_process
 
