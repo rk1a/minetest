@@ -5,20 +5,22 @@ import matplotlib.pyplot as plt
 import numpy as np
 from minetester.minetest_env import Minetest
 
-headless = False
+mt = True
+xvfb = True
+headless = True
 do_prints = False
 render = False
 sync = False
 sync_args = dict(
-    sync_port = 30010
+    sync_port = 30010,
     sync_dtime = 0.05
 )
 
 env = Minetest(
     base_seed=42,
-    start_minetest=False,
+    start_minetest=mt,
     headless=headless,
-    start_xvfb=False,
+    start_xvfb=xvfb,
     **(sync_args if sync else {})
 )
 
