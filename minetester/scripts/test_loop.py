@@ -1,29 +1,32 @@
 #!/usr/bin/env python3
-import os
-
+from gymnasium.wrappers import TimeLimit
 from minetester import Minetest
+
+
+render = True
+max_steps = 100
 
 env = Minetest(
     base_seed=42,
     start_minetest=True,
-    sync_port=30010,
-    sync_dtime=0.05,
     headless=True,
     start_xvfb=True,
-    clientmods=["random_v0"],
-    servermods=["info"]
 )
+env = TimeLimit(env, max_episode_steps=max_steps)
 
-render = True
-obs, _ = env.reset()
+env.reset()
 done = False
-while not done:
+step = 0
+while True:
     try:
         action = env.action_space.sample()
-        obs, rew, done, _, info = env.step(action)
-        print(rew, done, info)
+        _, rew, done, truncated, info = env.step(action)
+        print(step, rew, done or truncated, info)
         if render:
             env.render()
+        if done or truncated:
+            env.reset()
+        step += 1
     except KeyboardInterrupt:
         break
 env.close()
