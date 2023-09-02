@@ -122,6 +122,8 @@ def start_minetest_client(
     sync_port: int = None,
     headless: bool = False,
     display: int = None,
+    set_gpu_vars: bool = True,
+    set_vsync_vars: bool = True,
 ):
     cmd = [
         minetest_path,
@@ -158,12 +160,14 @@ def start_minetest_client(
         client_env = os.environ.copy()
         if display is not None:
             client_env["DISPLAY"] = ":" + str(display)
-        # enable GPU usage
-        client_env["__GLX_VENDOR_LIBRARY_NAME"] = "nvidia"
-        client_env["__NV_PRIME_RENDER_OFFLOAD"] = "1"
-        # disable vsync
-        client_env["__GL_SYNC_TO_VBLANK"] = "0"
-        client_env["vblank_mode"] = "0"
+        if set_gpu_vars:
+            # enable GPU usage
+            client_env["__GLX_VENDOR_LIBRARY_NAME"] = "nvidia"
+            client_env["__NV_PRIME_RENDER_OFFLOAD"] = "1"
+        if set_vsync_vars:
+            # disable vsync
+            client_env["__GL_SYNC_TO_VBLANK"] = "0"
+            client_env["vblank_mode"] = "0"
         client_process = subprocess.Popen(cmd, stdout=out, stderr=err, env=client_env)
     return client_process
 
