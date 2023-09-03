@@ -14,6 +14,7 @@ setup(
         'zmq',
         'protobuf==3.20.1',
         'psutil',
+        'patchelf',
     ],
     package_data={
         'minetester': [
