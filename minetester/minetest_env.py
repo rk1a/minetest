@@ -60,6 +60,7 @@ class Minetest(gym.Env):
         self._configure_spaces()
 
         # Define Minetest paths
+        self.start_xvfb = start_xvfb and self.headless
         self._set_artefact_dirs(artefact_dir, world_dir, config_path)  # Stores minetest artefacts and outputs
         self._set_minetest_dirs(minetest_root)  # Stores actual minetest dirs and executable
 
@@ -131,7 +132,6 @@ class Minetest(gym.Env):
         if "DISPLAY" in os.environ:
             self.default_display = int(os.environ["DISPLAY"].split(":")[1])
         self.x_display = x_display or self.default_display
-        self.start_xvfb = start_xvfb and self.headless
         self.xserver_process = None
         if self.start_xvfb:
             self.x_display = x_display or self.default_display + 4
@@ -191,7 +191,10 @@ class Minetest(gym.Env):
         if self.minetest_root is None:
             raise Exception("Unable to locate minetest executable")
         
-        self.minetest_executable = os.path.join(self.minetest_root,"bin","minetest")
+        if not self.start_xvfb and self.headless:
+            self.minetest_executable = os.path.join(self.minetest_root,"bin","minetest_headless")
+        else:
+            self.minetest_executable = os.path.join(self.minetest_root,"bin","minetest")
         
         self.cursor_image_path = os.path.join(
             self.minetest_root,
@@ -418,7 +421,7 @@ class Minetest(gym.Env):
         # TODO more robust check for whether a server/client is alive while receiving observations
         for process in [self.server_process, self.client_process]:
             if process is not None and process.poll() is not None:
-                return self.last_obs, 0.0, True, {}
+                return self.last_obs, 0.0, True, False, {}
 
         # Receive observation
         logging.debug("Waiting for obs...")
