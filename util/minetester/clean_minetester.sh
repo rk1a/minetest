@@ -1,1 +1,1 @@
-rm -r build/package
+rm -rf build/package

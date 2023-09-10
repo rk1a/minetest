@@ -1,2 +1,2 @@
-rm -r build
+rm -rf build
 rm bin/*
