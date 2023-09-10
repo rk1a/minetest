@@ -148,10 +148,10 @@ class Minetest(gym.Env):
                 **{key: gym.spaces.Discrete(2) for key in KEY_MAP.keys()},
                 **{
                     "MOUSE": gym.spaces.Box(
-                        np.array([-self.max_mouse_move_x, -self.max_mouse_move_y]),
-                        np.array([self.max_mouse_move_x, self.max_mouse_move_y]),
+                        np.array([-1, -1]),
+                        np.array([1, 1]),
                         shape=(2,),
-                        dtype=int,
+                        dtype=float,
                     ),
                 },
             },
@@ -417,6 +417,9 @@ class Minetest(gym.Env):
         # Send action
         if isinstance(action["MOUSE"], np.ndarray):
             action["MOUSE"] = action["MOUSE"].tolist()
+        # Scale mouse action according to screen ratio
+        action["MOUSE"][0] = int(action["MOUSE"][0] * self.max_mouse_move_x)
+        action["MOUSE"][1] = int(action["MOUSE"][1] * self.max_mouse_move_y)
         logging.debug("Sending action: {}".format(action))
         pb_action = pack_pb_action(action)
         self.socket.send(pb_action.SerializeToString())
