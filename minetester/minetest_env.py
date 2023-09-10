@@ -46,6 +46,7 @@ class Minetest(gym.Env):
         config_dict: Dict[str, Any] = {},
         sync_port: Optional[int] = None,
         sync_dtime: Optional[float] = None,
+        dtime: float = 0.05,
         headless: bool = False,
         start_xvfb: bool = False,
         x_display: Optional[int] = None,
@@ -72,6 +73,7 @@ class Minetest(gym.Env):
         self.server_port = server_port  # MT client <-> MT server
         self.sync_port = sync_port  # MT client <-> MT server
 
+        self.dtime = dtime
         self.sync_dtime = sync_dtime
 
         #Client Name
@@ -312,6 +314,7 @@ class Minetest(gym.Env):
             self.client_name,
             self.media_cache_dir,
             sync_port=self.sync_port,
+            dtime=self.dtime,
             headless=self.headless,
             display=self.x_display,
         )

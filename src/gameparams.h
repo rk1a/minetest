@@ -63,6 +63,7 @@ struct GameStartData : GameParams
 	bool resizable;
 	bool headless;
 	std::string cursor_image_path;
+	f32 custom_dtime;
 
 	ELoginRegister allow_login_or_register = ELoginRegister::Any;
 

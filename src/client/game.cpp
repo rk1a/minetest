@@ -907,6 +907,9 @@ private:
 	// cursor image used in Gui recording
 	irr::video::IImage* cursorImage;
 
+	// custom dtime
+	f32 custom_dtime = 0;
+
 	IWritableTextureSource *texture_src = nullptr;
 	IWritableShaderSource *shader_src = nullptr;
 
@@ -1234,6 +1237,9 @@ bool Game::startup(bool *kill,
 			core::string<fschar_t> cursorPath = start_data.cursor_image_path.c_str();
 			cursorImage = driver->createImageFromFile(cursorPath);
 		}
+
+		// set custom dtime
+		custom_dtime = start_data.custom_dtime;
 	}
 
 	m_rendering_engine->initialize(client, hud, start_data.isHeadless());
@@ -1299,6 +1305,7 @@ void Game::run()
 
 			//warningstream << "Received dtime = " << std::to_string(dtime) << std::endl;
 		} else {
+			dtime = custom_dtime;
 			info = client->getInfo();
 			reward = client->getReward();
 			terminal = client->getTerminal();
@@ -1334,7 +1341,7 @@ void Game::run()
 		// Calculate dtime =
 		//    m_rendering_engine->run() from this iteration
 		//  + Sleep time until the wanted FPS are reached
-		if (sync_socket == nullptr)
+		if (sync_socket == nullptr && custom_dtime > 0.f)
 			draw_times.limit(device, &dtime);
 
 		// Prepare render data for next iteration

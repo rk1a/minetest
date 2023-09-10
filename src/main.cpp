@@ -400,6 +400,8 @@ static void set_allowed_options(OptionList *allowed_options)
 			_("Internal port used for syncing server and dumb clients."))));
 	allowed_options->insert(std::make_pair("sync-dtime", ValueSpec(VALUETYPE_STRING,
 			_("Ingame time difference between steps when using server-client synchronization."))));
+	allowed_options->insert(std::make_pair("dtime", ValueSpec(VALUETYPE_STRING,
+			_("Ingame time difference between steps."))));
 
 
 

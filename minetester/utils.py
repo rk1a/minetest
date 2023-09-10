@@ -1,6 +1,6 @@
 import os
 import subprocess
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, Tuple, Optional
 
 import numpy as np
 from minetester.proto import objects_pb2 as pb_objects
@@ -119,9 +119,10 @@ def start_minetest_client(
     cursor_img: str,
     client_name: str,
     media_cache_dir: str,
-    sync_port: int = None,
+    sync_port: Optional[int] = None,
+    dtime : Optional[float] = None,
     headless: bool = False,
-    display: int = None,
+    display: Optional[int] = None,
     set_gpu_vars: bool = True,
     set_vsync_vars: bool = True,
 ):
@@ -153,6 +154,8 @@ def start_minetest_client(
         cmd.extend(["--cursor-image", cursor_img])
     if sync_port:
         cmd.extend(["--sync-port", str(sync_port)])
+    if dtime:
+        cmd.extend(["--dtime", str(dtime)])
 
     stdout_file = log_path.format("client_stdout")
     stderr_file = log_path.format("client_stderr")
