@@ -1305,7 +1305,8 @@ void Game::run()
 
 			//warningstream << "Received dtime = " << std::to_string(dtime) << std::endl;
 		} else {
-			dtime = custom_dtime;
+			if (custom_dtime > 0.f)
+				dtime = custom_dtime;
 			info = client->getInfo();
 			reward = client->getReward();
 			terminal = client->getTerminal();
@@ -1341,7 +1342,7 @@ void Game::run()
 		// Calculate dtime =
 		//    m_rendering_engine->run() from this iteration
 		//  + Sleep time until the wanted FPS are reached
-		if (sync_socket == nullptr && custom_dtime > 0.f)
+		if (sync_socket == nullptr && custom_dtime <= 0.f)
 			draw_times.limit(device, &dtime);
 
 		// Prepare render data for next iteration
