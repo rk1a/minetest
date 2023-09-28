@@ -24,7 +24,6 @@ if __name__ == "__main__":
                 env_port=5555 + rank,
                 server_port=30000 + rank,
                 base_seed=seed + rank,
-                sync_port=30010 + rank,
                 **env_kwargs,
             )
             # Assign random timelimit to check that resets work properly
@@ -42,7 +41,6 @@ if __name__ == "__main__":
         "fov": 72,
         "headless": True,
         "x_display": x_display,
-        "sync_dtime": 0.05,
     }
 
     # Create a vectorized environment
