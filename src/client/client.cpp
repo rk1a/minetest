@@ -919,10 +919,10 @@ void Client::ReceiveAll()
 	}
 	/*
 	// Get current time
-	auto now = std::chrono::high_resolution_clock::now();
+	auto now = std::chrono::sytem_clock::now();
 
 	// Convert to a time_t object
-	auto now_c = std::chrono::high_resolution_clock::to_time_t(now);
+	auto now_c = std::chrono::system_clock::to_time_t(now);
 
 	// Convert to local time
 	std::tm* now_tm = std::localtime(&now_c);
@@ -1935,10 +1935,10 @@ std::string Client::getInfo() {
 			std::string info(lua_tolstring(L, lua_gettop(L), &str_len));
 
 			// Get current time
-			auto now = std::chrono::high_resolution_clock::now();
+			auto now = std::chrono::system_clock::now();
 
 			// Convert to a time_t object
-			auto now_c = std::chrono::high_resolution_clock::to_time_t(now);
+			auto now_c = std::chrono::system_clock::to_time_t(now);
 
 			// Convert to local time
 			std::tm* now_tm = std::localtime(&now_c);
@@ -1979,10 +1979,10 @@ float Client::getReward() {
 			reward = (float)lua_tonumber(L, lua_gettop(L));
 
 			// Get current time
-			auto now = std::chrono::high_resolution_clock::now();
+			auto now = std::chrono::system_clock::now();
 
 			// Convert to a time_t object
-			auto now_c = std::chrono::high_resolution_clock::to_time_t(now);
+			auto now_c = std::chrono::system_clock::to_time_t(now);
 
 			// Convert to local time
 			std::tm* now_tm = std::localtime(&now_c);
