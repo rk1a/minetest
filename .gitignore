@@ -150,3 +150,6 @@ compile_commands.json
 
 # Generated mod storage database
 client/mod_storage.sqlite
+
+# Default artefact director
+artefacts/*
