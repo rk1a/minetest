@@ -1,6 +1,6 @@
 import os
 import subprocess
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, Tuple, Optional
 
 import numpy as np
 from minetester.proto import objects_pb2 as pb_objects
@@ -119,9 +119,12 @@ def start_minetest_client(
     cursor_img: str,
     client_name: str,
     media_cache_dir: str,
-    sync_port: int = None,
+    sync_port: Optional[int] = None,
+    dtime : Optional[float] = None,
     headless: bool = False,
-    display: int = None,
+    display: Optional[int] = None,
+    set_gpu_vars: bool = True,
+    set_vsync_vars: bool = True,
 ):
     cmd = [
         minetest_path,
@@ -151,6 +154,8 @@ def start_minetest_client(
         cmd.extend(["--cursor-image", cursor_img])
     if sync_port:
         cmd.extend(["--sync-port", str(sync_port)])
+    if dtime:
+        cmd.extend(["--dtime", str(dtime)])
 
     stdout_file = log_path.format("client_stdout")
     stderr_file = log_path.format("client_stderr")
@@ -158,6 +163,14 @@ def start_minetest_client(
         client_env = os.environ.copy()
         if display is not None:
             client_env["DISPLAY"] = ":" + str(display)
+        if set_gpu_vars:
+            # enable GPU usage
+            client_env["__GLX_VENDOR_LIBRARY_NAME"] = "nvidia"
+            client_env["__NV_PRIME_RENDER_OFFLOAD"] = "1"
+        if set_vsync_vars:
+            # disable vsync
+            client_env["__GL_SYNC_TO_VBLANK"] = "0"
+            client_env["vblank_mode"] = "0"
         client_process = subprocess.Popen(cmd, stdout=out, stderr=err, env=client_env)
     return client_process
 

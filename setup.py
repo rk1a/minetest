@@ -14,10 +14,12 @@ setup(
         'zmq',
         'protobuf==3.20.1',
         'psutil',
+        'patchelf',
     ],
     package_data={
         'minetester': [
              'minetest/bin/minetest',
+             'minetest/bin/minetest_headless',
              'minetest/client/**/*',
              'minetest/clientmods/**/*',
              'minetest/cursors/**/*',
