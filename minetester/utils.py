@@ -1,7 +1,7 @@
 """Utility functions for Minetester."""
 import os
 import subprocess
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 import numpy as np
 
@@ -64,8 +64,7 @@ def unpack_pb_obs(
     last_action = unpack_pb_action(pb_obs.action) if pb_obs.action else None
     rew = pb_obs.reward
     done = pb_obs.terminal
-    # TODO receive extra infos
-    info = {}
+    info = pb_obs.info
     return obs, rew, done, info, last_action
 
 
@@ -159,16 +158,20 @@ def start_minetest_server(
 
 
 def start_minetest_client(
-    minetest_path: str = "bin/minetest",
-    config_path: str = "minetest.conf",
-    log_path: str = "log/{}.log",
-    client_port: int = 5555,
-    server_port: int = 30000,
-    cursor_img: str = "cursors/mouse_cursor_white_16x16.png",
-    client_name: str = "MinetestAgent",
-    sync_port: int = None,
+    minetest_path: str,
+    config_path: str,
+    log_path: str,
+    client_port: int,
+    server_port: int,
+    cursor_img: str,
+    client_name: str,
+    media_cache_dir: str,
+    sync_port: Optional[int] = None,
+    dtime: Optional[float] = None,
     headless: bool = False,
-    display: int = None,
+    display: Optional[int] = None,
+    set_gpu_vars: bool = True,
+    set_vsync_vars: bool = True,
 ) -> subprocess.Popen:
     """Start a Minetest client.
 
@@ -183,6 +186,8 @@ def start_minetest_client(
         sync_port: Port for the synchronization with the server.
         headless: Whether to run the client in headless mode.
         display: value of the DISPLAY variable.
+        set_gpu_vars: whether to enable Nvidia GPU usage
+        set_vsync_vars: whether to disable Vsync
 
     Returns:
         The client process.
@@ -205,6 +210,8 @@ def start_minetest_client(
         "--noresizing",
         "--config",
         config_path,
+        "--cache",
+        media_cache_dir,
     ]
     if headless:
         # don't render to screen
@@ -213,6 +220,8 @@ def start_minetest_client(
         cmd.extend(["--cursor-image", cursor_img])
     if sync_port:
         cmd.extend(["--sync-port", str(sync_port)])
+    if dtime:
+        cmd.extend(["--dtime", str(dtime)])
 
     stdout_file = log_path.format("client_stdout")
     stderr_file = log_path.format("client_stderr")
@@ -220,6 +229,14 @@ def start_minetest_client(
         client_env = os.environ.copy()
         if display is not None:
             client_env["DISPLAY"] = ":" + str(display)
+        if set_gpu_vars:
+            # enable GPU usage
+            client_env["__GLX_VENDOR_LIBRARY_NAME"] = "nvidia"
+            client_env["__NV_PRIME_RENDER_OFFLOAD"] = "1"
+        if set_vsync_vars:
+            # disable vsync
+            client_env["__GL_SYNC_TO_VBLANK"] = "0"
+            client_env["vblank_mode"] = "0"
         client_process = subprocess.Popen(cmd, stdout=out, stderr=err, env=client_env)
     return client_process
 
@@ -248,3 +265,30 @@ def start_xserver(
     ]
     xserver_process = subprocess.Popen(cmd)
     return xserver_process
+
+
+def read_config_file(file_path):
+    config = {}
+    with open(file_path, "r") as f:
+        for line in f:
+            line = line.strip()
+            if line and not line.startswith("#"):
+                key, value = line.split("=", 1)
+                key = key.strip()
+                value = value.strip()
+                if value.isdigit():
+                    value = int(value)
+                elif value.replace(".", "", 1).isdigit():
+                    value = float(value)
+                elif value.lower() == "true":
+                    value = True
+                elif value.lower() == "false":
+                    value = False
+                config[key] = value
+    return config
+
+
+def write_config_file(file_path, config):
+    with open(file_path, "w") as f:
+        for key, value in config.items():
+            f.write(f"{key} = {value}\n")

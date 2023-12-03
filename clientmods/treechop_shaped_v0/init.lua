@@ -16,40 +16,42 @@ minetest.register_on_dignode(function(pos, node)
 end)
 
 minetest.register_globalstep(function(dtime)
-    -- reward looking at trees
-    local player_pos = core.localplayer:get_pos()
-    local cam_pos = core.camera:get_pos()
-	local pos2 = vector.add(cam_pos, vector.multiply(core.camera:get_look_dir(), 30))
-	local rc = core.raycast(cam_pos, pos2, false, false)
-    local thing = rc:next()
-    while thing do
-        if thing.type == "node" then
-            local pos = thing.under
-            local node = minetest.get_node_or_nil(pos)
-            local node_name = node.name
-            if string.find(node_name, "tree") then
-                --minetest.debug("Looking at a tree!")
-                REWARD = REWARD + 0.01
+    if core.localplayer then
+        -- reward looking at trees
+        local player_pos = core.localplayer:get_pos()
+        local cam_pos = core.camera:get_pos()
+        local pos2 = vector.add(cam_pos, vector.multiply(core.camera:get_look_dir(), 30))
+        local rc = core.raycast(cam_pos, pos2, false, false)
+        local thing = rc:next()
+        while thing do
+            if thing.type == "node" then
+                local pos = thing.under
+                local node = minetest.get_node_or_nil(pos)
+                local node_name = node.name
+                if string.find(node_name, "tree") then
+                    --minetest.debug("Looking at a tree!")
+                    REWARD = REWARD + 0.01
+                end
             end
+            thing = rc:next()
         end
-        thing = rc:next()
-    end
 
-    if MAX_TREE_DISTANCE > 0 then
-        -- rewards being closer to tree nodes
-        local tree_pos = minetest.find_node_near(
-            player_pos,
-            MAX_TREE_DISTANCE,
-            -- TODO why does group:tree not work for all tree nodes?
-            {"group:tree", "default:tree", "default:acacia_tree", "default:jungle_tree", "default:pine_tree", "default:aspen_tree"},
-            true
-        )
-        local dist = MAX_TREE_DISTANCE 
-        if tree_pos ~= nil then
-            --minetest.debug("Tree within range!")
-            dist = vector.distance(tree_pos, player_pos)
+        if MAX_TREE_DISTANCE > 0 then
+            -- rewards being closer to tree nodes
+            local tree_pos = minetest.find_node_near(
+                player_pos,
+                MAX_TREE_DISTANCE,
+                -- TODO why does group:tree not work for all tree nodes?
+                {"group:tree", "default:tree", "default:acacia_tree", "default:jungle_tree", "default:pine_tree", "default:aspen_tree"},
+                true
+            )
+            local dist = MAX_TREE_DISTANCE 
+            if tree_pos ~= nil then
+                --minetest.debug("Tree within range!")
+                dist = vector.distance(tree_pos, player_pos)
+            end
+            REWARD = REWARD - 0.01 * dist
         end
-        REWARD = REWARD - 0.01 * dist
     end
 end)
 

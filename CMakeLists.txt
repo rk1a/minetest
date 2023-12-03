@@ -11,7 +11,7 @@ endif()
 project(minetest)
 set(PROJECT_NAME_CAPITALIZED "Minetest")
 
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 set(GCC_MINIMUM_VERSION "5.1")
 set(CLANG_MINIMUM_VERSION "3.5")
@@ -51,6 +51,12 @@ set(RUN_IN_PLACE ${DEFAULT_RUN_IN_PLACE} CACHE BOOL
 
 set(BUILD_CLIENT TRUE CACHE BOOL "Build client")
 set(BUILD_HEADLESS TRUE CACHE BOOL "Build in headless mode")
+
+if(APPLE AND BUILD_HEADLESS)
+	message(FATAL_ERROR "Headless mode is not supported on MacOS yet. It should be possible, PRs welcome.")
+endif()
+
+
 set(BUILD_SERVER FALSE CACHE BOOL "Build server")
 set(BUILD_UNITTESTS TRUE CACHE BOOL "Build unittests")
 set(BUILD_BENCHMARKS FALSE CACHE BOOL "Build benchmarks")

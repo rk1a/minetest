@@ -31,6 +31,7 @@ public:
 	void setAction(pb_objects::Action & action);
 	void setImage(pb_objects::Image & img);
 	void setReward(float & reward);
+	void setInfo(std::string & info);
 	void setTerminal(bool & terminal);
     void sendObservation();
 
@@ -42,4 +43,5 @@ private:
 	pb_objects::Image imgToSend;
 	float rewardToSend;
 	bool terminalToSend;
+	std::string infoToSend;
 };

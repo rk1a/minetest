@@ -5,23 +5,26 @@ import matplotlib.pyplot as plt
 import numpy as np
 from minetester.minetest_env import Minetest
 
+mt = True
+xvfb = True
 headless = True
+do_prints = False
 render = False
-sync = True
-sync_port = 30010
-sync_dtime = 0.05
-undersampling = 1
-
-env = Minetest(
-    seed=42,
-    start_minetest=True,
-    xvfb_headless=headless,
-    sync_port=sync_port,
-    sync_dtime=sync_dtime,
-    config_dict=dict(undersampling=undersampling),
+sync = False
+sync_args = dict(
+    sync_port = 30010,
+    sync_dtime = 0.05
 )
 
-obs = env.reset()
+env = Minetest(
+    base_seed=42,
+    start_minetest=mt,
+    headless=headless,
+    start_xvfb=xvfb,
+    **(sync_args if sync else {})
+)
+
+_ = env.reset()
 tot_time = 0
 time_list = []
 fps_list = []
@@ -30,9 +33,11 @@ while True:
     start = time.time()
     try:
         action = env.action_space.sample()
-        obs, rew, done, info = env.step(action)
+        _ = env.step(action)
         if render:
             env.render()
+        if do_prints:
+            print(f"Step {step}")
 
         dtime = time.time() - start
         tot_time += dtime

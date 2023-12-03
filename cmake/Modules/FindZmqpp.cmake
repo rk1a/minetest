@@ -8,10 +8,10 @@ message(${CMAKE_SOURCE_DIR})
 if(ENABLE_SYSTEM_ZMQPP)
 	find_library(ZMQPP_LIBRARY NAMES zmqpp)
 	find_path(ZMQPP_INCLUDE_DIR NAMES zmqpp.hpp PATH_SUFFIXES zmqpp)
-	
+
 	if(ZMQPP_LIBRARY AND ZMQPP_INCLUDE_DIR)
 		message (STATUS "Using ZMQPP provided by system.")
-		set(USE_SYSTEM_GMP TRUE)
+		set(USE_SYSTEM_ZMQPP TRUE)
 	else()
 		message (STATUS "Detecting ZMQPP from system failed.")
 	endif()
@@ -20,17 +20,17 @@ endif()
 
 if(NOT USE_SYSTEM_ZMQPP)
 	message(STATUS "Using ZMQPP submodule")
-	find_path(ZMQPP_INCLUDE_DIR NAMES zmqpp/zmqpp.hpp 
+	find_path(ZMQPP_INCLUDE_DIR NAMES zmqpp/zmqpp.hpp
 		PATHS
 		${CMAKE_SOURCE_DIR}/lib/zmqpp/src/
 		PATH_SUFFIXES zmqpp)
 
-	find_library(ZMQPP_LIBRARY NAMES zmqpp 
-		PATHS ${CMAKE_SOURCE_DIR}/lib/zmqpp/build/max-g++)
+	find_library(ZMQPP_LIBRARY NAMES zmqpp
+		PATHS ${CMAKE_SOURCE_DIR}/lib/zmqpp/build)
 
 	message(${ZMQPP_INCLUDE_DIR})
 	message(${ZMQPP_LIBRARY})
-	
+
 	if(ZMQPP_LIBRARY AND ZMQPP_INCLUDE_DIR)
 		message(STATUS "Using ZMQPP provided by the submodule.")
 	else()

@@ -355,6 +355,8 @@ void ClientLauncher::init_args(GameStartData &start_data, const Settings &cmd_ar
 
 	if (dumb && cmd_args.exists("sync-port"))
 		start_data.sync_port = cmd_args.get("sync-port");
+
+	start_data.custom_dtime = cmd_args.exists("dtime") ? cmd_args.getFloat("dtime") : 0.f;
 }
 
 bool ClientLauncher::init_engine()

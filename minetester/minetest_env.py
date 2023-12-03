@@ -6,49 +6,53 @@ import shutil
 import uuid
 from typing import Any, Dict, List, Optional, Tuple
 
-import gym
+import gymnasium as gym
 import matplotlib.pyplot as plt
 import numpy as np
+import pkg_resources
 import zmq
 
 from minetester.utils import (
     KEY_MAP,
     pack_pb_action,
+    read_config_file,
     start_minetest_client,
     start_minetest_server,
     start_xserver,
     unpack_pb_obs,
+    write_config_file,
 )
 
 
 class Minetest(gym.Env):
-    """Minetest gym environment."""
-
-    metadata = {"render.modes": ["rgb_array", "human"]}
+    metadata = {"render_modes": ["rgb_array", "human"], "render_fps": 20}
     default_display_size = (1024, 600)
 
     def __init__(
         self,
         env_port: int = 5555,
         server_port: int = 30000,
-        minetest_executable: Optional[os.PathLike] = None,
-        log_dir: Optional[os.PathLike] = None,
-        config_path: Optional[os.PathLike] = None,
-        cursor_image_path: Optional[os.PathLike] = None,
+        minetest_root: Optional[os.PathLike] = None,
+        artefact_dir: Optional[os.PathLike] = None,
         world_dir: Optional[os.PathLike] = None,
+        config_path: Optional[os.PathLike] = None,
         display_size: Tuple[int, int] = default_display_size,
         fov: int = 72,
-        seed: Optional[int] = None,
+        base_seed: int = 0,
+        world_seed: Optional[int] = None,
         start_minetest: bool = True,
         game_id: str = "minetest",
+        client_name: str = "minetester",
         clientmods: List[str] = [],
         servermods: List[str] = [],
         config_dict: Dict[str, Any] = {},
         sync_port: Optional[int] = None,
         sync_dtime: Optional[float] = None,
+        dtime: float = 0.05,
         headless: bool = False,
         start_xvfb: bool = False,
         x_display: Optional[int] = None,
+        render_mode: str = "human",
     ):
         """Initialize Minetest environment.
 
@@ -78,60 +82,19 @@ class Minetest(gym.Env):
         self.unique_env_id = str(uuid.uuid4())
 
         # Graphics settings
-        self.headless = headless
-        self.display_size = display_size
-        self.fov_y = fov
-        self.fov_x = self.fov_y * self.display_size[0] / self.display_size[1]
+        self._set_graphics(headless, display_size, fov, render_mode)
 
         # Define action and observation space
-        self.max_mouse_move_x = self.display_size[0]
-        self.max_mouse_move_y = self.display_size[1]
-        self.action_space = gym.spaces.Dict(
-            {
-                **{key: gym.spaces.Discrete(2) for key in KEY_MAP.keys()},
-                **{
-                    "MOUSE": gym.spaces.Box(
-                        np.array([-self.max_mouse_move_x, -self.max_mouse_move_y]),
-                        np.array([self.max_mouse_move_x, self.max_mouse_move_y]),
-                        shape=(2,),
-                        dtype=int,
-                    ),
-                },
-            },
-        )
-        self.observation_space = gym.spaces.Box(
-            0,
-            255,
-            shape=(self.display_size[1], self.display_size[0], 3),
-            dtype=np.uint8,
-        )
+        self._configure_spaces()
 
         # Define Minetest paths
-        self.root_dir = os.path.dirname(os.path.dirname(__file__))
-        self.minetest_executable = minetest_executable
-        if minetest_executable is None:
-            self.minetest_executable = os.path.join(self.root_dir, "bin", "minetest")
-        if log_dir is None:
-            self.log_dir = os.path.join(self.root_dir, "log")
-        os.makedirs(self.log_dir, exist_ok=True)
-        self.world_dir = world_dir
-        self.config_path = config_path
-        self.cursor_image_path = cursor_image_path
-        if cursor_image_path is None:
-            self.cursor_image_path = os.path.join(
-                self.root_dir,
-                "cursors",
-                "mouse_cursor_white_16x16.png",
-            )
-
-        # Regenerate and clean world and config if no custom ones provided
-        self.reset_world = self.world_dir is None
-        self.clean_config = self.config_path is None
-        # If no custom world / config provided set folder / path based on UUID
-        if self.world_dir is None:
-            self.world_dir = os.path.join(self.root_dir, self.unique_env_id)
-        if self.config_path is None:
-            self.config_path = os.path.join(self.root_dir, f"{self.unique_env_id}.conf")
+        self.start_xvfb = start_xvfb and self.headless
+        self._set_artefact_dirs(
+            artefact_dir, world_dir, config_path
+        )  # Stores minetest artefacts and outputs
+        self._set_minetest_dirs(
+            minetest_root
+        )  # Stores actual minetest dirs and executable
 
         # Whether to start minetest server and client
         self.start_minetest = start_minetest
@@ -141,7 +104,11 @@ class Minetest(gym.Env):
         self.server_port = server_port  # MT client <-> MT server
         self.sync_port = sync_port  # MT client <-> MT server
 
+        self.dtime = dtime
         self.sync_dtime = sync_dtime
+
+        # Client Name
+        self.client_name = client_name
 
         # ZMQ objects
         self.socket = None
@@ -157,8 +124,17 @@ class Minetest(gym.Env):
         self.render_img = None
 
         # Seed the environment
-        if seed is not None:
-            self.seed(seed)
+        self.base_seed = base_seed
+        self.world_seed = world_seed
+        # If no world_seed is provided
+        # seed the world with a random seed
+        # generated by the RNG from base_seed
+        self.reseed_on_reset = world_seed is None
+        self._seed(self.base_seed)
+
+        # Write minetest.conf
+        self.config_dict = config_dict
+        self._write_config()
 
         # Configure logging
         logging.basicConfig(
@@ -177,26 +153,126 @@ class Minetest(gym.Env):
             self.servermods += ["rewards"]  # require the server rewards mod
             self._enable_servermods()
         else:
-            self.clientmods += ["rewards"]  # require the client rewards mod
+            self.clientmods += ["rewards"]  # require the client rewards med
             # add client mod names in case they entail a server side component
             self.servermods += clientmods
             self._enable_clientmods()
             self._enable_servermods()
-
-        # Write minetest.conf
-        self.config_dict = config_dict
-        self._write_config()
 
         # Start X server virtual frame buffer
         self.default_display = x_display or 0
         if "DISPLAY" in os.environ:
             self.default_display = int(os.environ["DISPLAY"].split(":")[1])
         self.x_display = x_display or self.default_display
-        self.start_xvfb = start_xvfb and self.headless
         self.xserver_process = None
         if self.start_xvfb:
             self.x_display = x_display or self.default_display + 4
             self.xserver_process = start_xserver(self.x_display, self.display_size)
+
+    def _configure_spaces(self):
+        # Define action and observation space
+        self.max_mouse_move_x = self.display_size[0]
+        self.max_mouse_move_y = self.display_size[1]
+        self.action_space = gym.spaces.Dict(
+            {
+                **{key: gym.spaces.Discrete(2) for key in KEY_MAP.keys()},
+                **{
+                    "MOUSE": gym.spaces.Box(
+                        np.array([-1, -1]),
+                        np.array([1, 1]),
+                        shape=(2,),
+                        dtype=float,
+                    ),
+                },
+            },
+        )
+        self.observation_space = gym.spaces.Box(
+            0,
+            255,
+            shape=(self.display_size[1], self.display_size[0], 3),
+            dtype=np.uint8,
+        )
+
+    def _set_graphics(
+        self, headless: bool, display_size: Tuple[int, int], fov: int, render_mode: str
+    ):
+        # gymnasium render mode
+        self.render_mode = render_mode
+        # minetest graphics settings
+        self.headless = headless
+        self.display_size = display_size
+        self.fov_y = fov
+        self.fov_x = self.fov_y * self.display_size[0] / self.display_size[1]
+
+    def _set_minetest_dirs(self, minetest_root):
+        self.minetest_root = minetest_root
+        if self.minetest_root is None:
+            # check for local install
+            candidate_minetest_root = os.path.dirname(os.path.dirname(__file__))
+            candidate_minetest_executable = os.path.join(
+                os.path.dirname(os.path.dirname(__file__)), "bin", "minetest"
+            )
+            if os.path.isfile(candidate_minetest_executable):
+                self.minetest_root = candidate_minetest_root
+
+        if self.minetest_root is None:
+            # check for package install
+            try:
+                candidate_minetest_executable = pkg_resources.resource_filename(
+                    __name__, os.path.join("minetest", "bin", "minetest")
+                )
+                if os.path.isfile(candidate_minetest_executable):
+                    self.minetest_root = os.path.dirname(
+                        os.path.dirname(candidate_minetest_executable)
+                    )
+            except Exception as e:
+                logging.warning(f"Error loading resource file 'bin.minetest': {e}")
+
+        if self.minetest_root is None:
+            raise Exception("Unable to locate minetest executable")
+
+        if not self.start_xvfb and self.headless:
+            self.minetest_executable = os.path.join(
+                self.minetest_root, "bin", "minetest_headless"
+            )
+        else:
+            self.minetest_executable = os.path.join(
+                self.minetest_root, "bin", "minetest"
+            )
+
+        self.cursor_image_path = os.path.join(
+            self.minetest_root,
+            "cursors",
+            "mouse_cursor_white_16x16.png",
+        )
+
+    def _set_artefact_dirs(self, artefact_dir, world_dir, config_path):
+        if artefact_dir is None:
+            self.artefact_dir = os.path.join(os.getcwd(), "artefacts")
+        else:
+            self.artefact_dir = artefact_dir
+
+        if config_path is None:
+            self.clean_config = True
+            self.config_path = os.path.join(
+                self.artefact_dir, f"{self.unique_env_id}.conf"
+            )
+        else:
+            self.clean_config = True
+            self.config_path = config_path
+
+        if world_dir is None:
+            self.reset_world = True
+            self.world_dir = os.path.join(self.artefact_dir, self.unique_env_id)
+        else:
+            self.reset_world = False
+            self.world_dir = world_dir
+
+        self.log_dir = os.path.join(self.artefact_dir, "log")
+        self.media_cache_dir = os.path.join(self.artefact_dir, "media_cache")
+
+        os.makedirs(self.log_dir, exist_ok=True)
+        os.makedirs(self.media_cache_dir, exist_ok=True)
 
     def _enable_clientmods(self):
         clientmods_folder = os.path.realpath(
@@ -279,7 +355,10 @@ class Minetest(gym.Env):
             self.env_port,
             self.server_port,
             self.cursor_image_path,
+            self.client_name,
+            self.media_cache_dir,
             sync_port=self.sync_port,
+            dtime=self.dtime,
             headless=self.headless,
             display=self.x_display,
         )
@@ -293,7 +372,7 @@ class Minetest(gym.Env):
 
     def _delete_world(self):
         if os.path.exists(self.world_dir):
-            shutil.rmtree(self.world_dir)
+            shutil.rmtree(self.world_dir, ignore_errors=True)
 
     def _check_config_path(self):
         if self.config_path is None:
@@ -307,69 +386,69 @@ class Minetest(gym.Env):
             os.remove(self.config_path)
 
     def _write_config(self):
-        with open(self.config_path, "w") as config_file:
-            # Update default settings
-            # TODO load these values from custom minetest config
-            config_file.write("mute_sound = true\n")
-            config_file.write("show_debug = false\n")
-            config_file.write("enable_client_modding = true\n")
-            # config_file.write("video_driver = null\n")
-            # config_file.write("enable_shaders = false\n")
-            config_file.write("csm_restriction_flags = 0\n")
-            config_file.write("enable_mod_channels = true\n")
-            config_file.write("server_map_save_interval = 1000000\n")
-            config_file.write("profiler_print_interval = 0\n")
-            config_file.write("active_block_range = 2\n")
-            config_file.write("abm_time_budget = 0.01\n")
-            config_file.write("abm_interval = 0.1\n")
-            config_file.write("active_block_mgmt_interval = 4.0\n")
-            config_file.write("server_unload_unused_data_timeout = 1000000\n")
-            config_file.write("client_unload_unused_data_timeout = 1000000\n")
-            config_file.write("debug_log_level = verbose\n")
-            config_file.write("full_block_send_enable_min_time_from_building = 0.\n")
-            config_file.write("max_block_send_distance = 100\n")
-            config_file.write("max_block_generate_distance = 100\n")
-            config_file.write("num_emerge_threads = 0\n")
-            config_file.write("emergequeue_limit_total = 1000000\n")
-            config_file.write("emergequeue_limit_diskonly = 1000000\n")
-            config_file.write("emergequeue_limit_generate = 1000000\n")
-
-            # Set display size
-            config_file.write(f"screen_w = {self.display_size[0]}\n")
-            config_file.write(f"screen_h = {self.display_size[1]}\n")
+        config = dict(
+            # Base config
+            mute_sound=True,
+            show_debug=False,
+            enable_client_modding=True,
+            csm_restriction_flags=0,
+            enable_mod_channels=True,
+            screen_w=self.display_size[0],
+            screen_h=self.display_size[1],
+            fov=self.fov_y,
             # Adapt HUD size to display size
-            hud_scale = self.display_size[0] / Minetest.default_display_size[0]
-            config_file.write(f"hud_scaling = {hud_scale}\n")
+            hud_scaling=self.display_size[0] / Minetest.default_display_size[0],
+            # Experimental settings to improve performance
+            server_map_save_interval=1000000,
+            profiler_print_interval=0,
+            active_block_range=2,
+            abm_time_budget=0.01,
+            abm_interval=0.1,
+            active_block_mgmt_interval=4.0,
+            server_unload_unused_data_timeout=1000000,
+            client_unload_unused_data_timeout=1000000,
+            full_block_send_enable_min_time_from_building=0.0,
+            max_block_send_distance=100,
+            max_block_generate_distance=100,
+            num_emerge_threads=0,
+            emergequeue_limit_total=1000000,
+            emergequeue_limit_diskonly=1000000,
+            emergequeue_limit_generate=1000000,
+            fps_max=1000,
+            fps_max_unfocused=1000,
+        )
+        # Update config from existing config file
+        if os.path.exists(self.config_path):
+            config.update(read_config_file(self.config_path))
+        # Seed the map generator if not using a custom map
+        if self.world_seed:
+            config.update(fixed_map_seed=self.world_seed)
+        # Set from custom config dict
+        config.update(self.config_dict)
+        write_config_file(self.config_path, config)
 
-            # Set FOV
-            config_file.write(f"fov = {self.fov_y}\n")
+    def _seed(self, seed: Optional[int] = None):
+        # for reproducibility we only reset the RNG if it was not set before
+        # or if a seed is provided to avoid the use of kernel RNG/time seeding
+        # Note: kernel RNG/time seeding is still used if the inital seed=None
+        if self._np_random is None or (
+            self._np_random is not None and seed is not None
+        ):
+            self._np_random = np.random.default_rng(seed)
 
-            # Seed the map generator
-            if self.the_seed:
-                config_file.write(f"fixed_map_seed = {self.the_seed}\n")
+    def _sample_world_seed(self):
+        self.world_seed = self._np_random.integers(np.iinfo(np.int64).max)
 
-            # Set from custom config dict
-            # TODO enable overwriting of default settings
-            for key, value in self.config_dict.items():
-                config_file.write(f"{key} = {value}\n")
-
-    def seed(self, seed: int) -> None:
-        """Seed the environment with a given seed.
-
-        Args:
-            seed: The seed to use.
-        """
-        self.the_seed = seed
-
-    def reset(self) -> np.ndarray:
-        """Reset the environment.
-
-        Returns:
-            The initial observation.
-        """
+    def reset(
+        self, seed: Optional[int] = None, options: Optional[Dict[str, Any]] = None
+    ):
+        self._seed(seed=seed)
         if self.start_minetest:
             if self.reset_world:
                 self._delete_world()
+                if self.reseed_on_reset:
+                    self._sample_world_seed()
+                self._write_config()
             self._enable_servermods()
             self._reset_minetest()
         self._reset_zmq()
@@ -380,7 +459,7 @@ class Minetest(gym.Env):
         obs, _, _, _, _ = unpack_pb_obs(byte_obs)
         self.last_obs = obs
         logging.debug("Received first obs: {}".format(obs.shape))
-        return obs
+        return obs, {}
 
     def step(
         self,
@@ -398,6 +477,9 @@ class Minetest(gym.Env):
         # Send action
         if isinstance(action["MOUSE"], np.ndarray):
             action["MOUSE"] = action["MOUSE"].tolist()
+        # Scale mouse action according to screen ratio
+        action["MOUSE"][0] = int(action["MOUSE"][0] * self.max_mouse_move_x)
+        action["MOUSE"][1] = int(action["MOUSE"][1] * self.max_mouse_move_y)
         logging.debug("Sending action: {}".format(action))
         pb_action = pack_pb_action(action)
         self.socket.send(pb_action.SerializeToString())
@@ -406,7 +488,7 @@ class Minetest(gym.Env):
         # is alive while receiving observations
         for process in [self.server_process, self.client_process]:
             if process is not None and process.poll() is not None:
-                return self.last_obs, 0.0, True, {}
+                return self.last_obs, 0.0, True, False, {}
 
         # Receive observation
         logging.debug("Waiting for obs...")
@@ -417,22 +499,12 @@ class Minetest(gym.Env):
             assert action == last_action
 
         self.last_obs = next_obs
-        logging.debug(f"Received obs - {next_obs.shape}; reward - {rew}")
-        return next_obs, rew, done, info
+        logging.debug(f"Received obs - {next_obs.shape}; reward - {rew}; info - {info}")
+        return next_obs, rew, done, False, {"minetest_info": info}
 
-    def render(self, render_mode: str = "human") -> Optional[np.ndarray]:
-        """Render the environment.
-
-        Args:
-            render_mode: The mode to render in. Can be "human" or "rgb_array".
-
-        Returns:
-            If render_mode is "rgb_array", returns the rendered image.
-
-        Raises:
-            NotImplementedError: If render_mode is not "human" or "rgb_array".
-        """
-        if render_mode == "human":
+    def render(self):
+        if self.render_mode == "human":
+            # TODO replace with pygame
             if self.render_img is None:
                 # Setup figure
                 plt.rcParams["toolbar"] = "None"
@@ -448,14 +520,14 @@ class Minetest(gym.Env):
                 self.render_fig.gca().autoscale_view()
             else:
                 self.render_img.set_data(self.last_obs)
-            plt.draw(), plt.pause(1e-3)
-        elif render_mode == "rgb_array":
+            plt.draw(), plt.pause(1 / self.metadata["render_fps"])
+        elif self.render_mode == "rgb_array":
             return self.last_obs
         else:
             raise NotImplementedError(
                 "You are calling 'render()' with an unsupported"
-                f" render mode: '{render_mode}'. "
-                f"Supported modes: {self.metadata['render.modes']}",
+                f" render mode: '{self.render_mode}'. "
+                f"Supported modes: {self.metadata['render_modes']}"
             )
 
     def close(self) -> None:

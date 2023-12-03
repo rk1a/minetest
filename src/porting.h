@@ -170,7 +170,7 @@ void migrateCachePath();
 /*
 	Initialize path_*.
 */
-void initializePaths();
+void initializePaths(std::string media_cache_dir);
 
 /*
 	Return system information

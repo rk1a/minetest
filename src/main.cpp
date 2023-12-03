@@ -168,7 +168,12 @@ int main(int argc, char *argv[])
 	porting::initAndroid();
 	porting::initializePathsAndroid();
 #else
-	porting::initializePaths();
+	std::string media_cache_dir; 
+	if (cmd_args.getFlag("cache")){
+		media_cache_dir = cmd_args.get("cache");
+	}
+	
+	porting::initializePaths(media_cache_dir);
 #endif
 
 	if (!create_userdata_path()) {
@@ -314,6 +319,8 @@ static void set_allowed_options(OptionList *allowed_options)
 			_("Show allowed options"))));
 	allowed_options->insert(std::make_pair("version", ValueSpec(VALUETYPE_FLAG,
 			_("Show version information"))));
+	allowed_options->insert(std::make_pair("cache", ValueSpec(VALUETYPE_STRING,
+			_("Set media cache directory"))));
 	allowed_options->insert(std::make_pair("config", ValueSpec(VALUETYPE_STRING,
 			_("Load configuration from specified file"))));
 	allowed_options->insert(std::make_pair("port", ValueSpec(VALUETYPE_STRING,
@@ -393,6 +400,8 @@ static void set_allowed_options(OptionList *allowed_options)
 			_("Internal port used for syncing server and dumb clients."))));
 	allowed_options->insert(std::make_pair("sync-dtime", ValueSpec(VALUETYPE_STRING,
 			_("Ingame time difference between steps when using server-client synchronization."))));
+	allowed_options->insert(std::make_pair("dtime", ValueSpec(VALUETYPE_STRING,
+			_("Ingame time difference between steps."))));
 
 
 

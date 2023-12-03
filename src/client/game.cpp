@@ -907,6 +907,9 @@ private:
 	// cursor image used in Gui recording
 	irr::video::IImage* cursorImage = nullptr;
 
+	// custom dtime
+	f32 custom_dtime = 0;
+
 	IWritableTextureSource *texture_src = nullptr;
 	IWritableShaderSource *shader_src = nullptr;
 
@@ -1176,7 +1179,7 @@ bool Game::startup(bool *kill,
 				errorstream << "ZeroMQ error: " << e.what() << " (address: " << start_data.client_address << ")\n";
 				throw e;
 			};
-			
+
 			if (start_data.sync_port != "") {
 				// the dumb client is synchronized with the server (and other clients)
 				// via a REQ/REP pattern
@@ -1219,7 +1222,7 @@ bool Game::startup(bool *kill,
 				};
 			}
 		}
-		
+
 		// pass socket to dumb handler and recorder
 		if (start_data.isDumbClient()) {
 			dynamic_cast<DumbClientInputHandler*>(input)->socket = data_socket;
@@ -1234,6 +1237,9 @@ bool Game::startup(bool *kill,
 			core::string<fschar_t> cursorPath = start_data.cursor_image_path.c_str();
 			cursorImage = driver->createImageFromFile(cursorPath);
 		}
+
+		// set custom dtime
+		custom_dtime = start_data.custom_dtime;
 	}
 
 	m_rendering_engine->initialize(client, hud, start_data.isHeadless());
@@ -1272,10 +1278,11 @@ void Game::run()
 	while (m_rendering_engine->run()
 			&& !(*kill || g_gamecallback->shutdown_requested
 			|| (server && server->isShutdownRequested()))) {
-		
-		
+
+
 		float reward;
 		bool terminal;
+		std::string info;
 		if (sync_socket != nullptr) {
 			// send client is done signal to server
 			zmqpp::message syncDoneMsg;
@@ -1294,17 +1301,22 @@ void Game::run()
 			dtime = serverSyncMsg.get<f32>(0);
 			reward = serverSyncMsg.get<float>(1);
 			terminal = serverSyncMsg.get<bool>(2);
-		
+			info = serverSyncMsg.get<std::string>(3);
+
 			//warningstream << "Received dtime = " << std::to_string(dtime) << std::endl;
 		} else {
+			if (custom_dtime > 0.f)
+				dtime = custom_dtime;
+			info = client->getInfo();
 			reward = client->getReward();
 			terminal = client->getTerminal();
 		}
-		
+
 		// send data out
 		std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
 		if(recorder && !firstIter) {
 			pb_objects::Image pb_img = client->getPixelData(input->getMousePos(), isMenuActive(), cursorImage);
+			recorder->setInfo(info);
 			recorder->setImage(pb_img);
 			recorder->setReward(reward);
 			recorder->setTerminal(terminal);
@@ -1313,7 +1325,7 @@ void Game::run()
 		std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
 		//warningstream << "Time difference = " << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() << "[µs]" << std::endl;
 
-		
+
 		const irr::core::dimension2d<u32> &current_screen_size =
 			m_rendering_engine->get_video_driver()->getScreenSize();
 		// Verify if window size has changed and save it if it's the case
@@ -1330,7 +1342,7 @@ void Game::run()
 		// Calculate dtime =
 		//    m_rendering_engine->run() from this iteration
 		//  + Sleep time until the wanted FPS are reached
-		if (sync_socket == nullptr)
+		if (sync_socket == nullptr && custom_dtime <= 0.f)
 			draw_times.limit(device, &dtime);
 
 		// Prepare render data for next iteration
@@ -1379,7 +1391,7 @@ void Game::run()
 				resumeAnimation();
 		}
 
-		
+
 		if (!m_is_paused)
 			step(dtime);
 		processClientEvents(&cam_view_target);

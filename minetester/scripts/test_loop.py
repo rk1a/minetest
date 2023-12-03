@@ -1,27 +1,34 @@
-#!/usr/bin/env python3
 """Test loop for Minetest environment."""
-from minetester import Minetest
 
 if __name__ == "__main__":
-    env = Minetest(
-        seed=42,
-        start_minetest=True,
-        sync_port=30010,
-        sync_dtime=0.05,
-        headless=True,
-        start_xvfb=True,
-        clientmods=["random_v0"],
-    )
+    from gymnasium.wrappers import TimeLimit
+
+    from minetester import Minetest
 
     render = True
-    obs = env.reset()
+    max_steps = 100
+
+    env = Minetest(
+        base_seed=42,
+        start_minetest=True,
+        headless=True,
+        start_xvfb=True,
+    )
+    env = TimeLimit(env, max_episode_steps=max_steps)
+
+    env.reset()
     done = False
-    while not done:
+    step = 0
+    while True:
         try:
             action = env.action_space.sample()
-            obs, rew, done, info = env.step(action)
+            _, rew, done, truncated, info = env.step(action)
+            print(step, rew, done or truncated, info)
             if render:
                 env.render()
+            if done or truncated:
+                env.reset()
+            step += 1
         except KeyboardInterrupt:
             break
     env.close()
