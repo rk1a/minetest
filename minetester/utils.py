@@ -183,7 +183,9 @@ def start_minetest_client(
         server_port: Port of the server to connect to.
         cursor_img: Path to the cursor image.
         client_name: Name of the client.
+        media_cache_dir: Directory of minetest's media cache.
         sync_port: Port for the synchronization with the server.
+        dtime: In-game time step in seconds.
         headless: Whether to run the client in headless mode.
         display: value of the DISPLAY variable.
         set_gpu_vars: whether to enable Nvidia GPU usage
@@ -267,7 +269,15 @@ def start_xserver(
     return xserver_process
 
 
-def read_config_file(file_path):
+def read_config_file(file_path: os.PathLike):
+    """Read and parse minetest config files.
+
+    Args:
+        file_path: Path to minetest config.
+
+    Returns:
+        dictionary containing the parsed config.
+    """
     config = {}
     with open(file_path, "r") as f:
         for line in f:
@@ -288,7 +298,14 @@ def read_config_file(file_path):
     return config
 
 
-def write_config_file(file_path, config):
+def write_config_file(file_path: os.PathLike, config: Dict[str, Any]):
+    """Write a minetest config file.
+
+    Args:
+        file_path: Write path for minetest config.
+        config: Dictionary representing minetest config.
+
+    """
     with open(file_path, "w") as f:
         for key, value in config.items():
             f.write(f"{key} = {value}\n")

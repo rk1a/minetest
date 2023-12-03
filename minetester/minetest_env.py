@@ -1,4 +1,4 @@
-"""Minetest gym environment."""
+"""Minetest Gymnasium Environment."""
 import datetime
 import logging
 import os
@@ -25,6 +25,8 @@ from minetester.utils import (
 
 
 class Minetest(gym.Env):
+    """Minetest Gymnasium Environment."""
+
     metadata = {"render_modes": ["rgb_array", "human"], "render_fps": 20}
     default_display_size = (1024, 600)
 
@@ -59,25 +61,29 @@ class Minetest(gym.Env):
         Args:
             env_port: Port between gym environment and a Minetest client
             server_port: Port between Minetest client and server
-            minetest_executable: Path to Minetest executable
-            log_dir: Path to log directory
+            minetest_root: Path to Minetest root
+            artefact_dir: Artefact directory, e.g. for logs, media cache, etc.
             config_path: Path to minetest.conf
-            cursor_image_path: Path to cursor image for menu and inventory
             world_dir: Path to Minetest world directory
             display_size: Size in pixels of the Minetest window
             fov: Field of view in degrees of the Minetest window
-            seed: Seed for the Minetest world
+            base_seed: Seed for the Minetest environment.
+            world_seed: Fixed seed for world generation. If not set, world seeds
+                are randomly generated from `base_seed` at each `reset`
             start_minetest: Whether to start Minetest server and client or
                 connect to existing processes
             game_id: Name of the Minetest game
+            client_name: Name of the client/player.
             clientmods: List of client mod names
             servermods: List of server mod names
             config_dict: Dictionary of config options updating the loaded config file
             sync_port: Port between Minetest client and server for synchronization
             sync_dtime: In-game time between two steps
+            dtime: Client-side in-game time between time steps
             headless: Whether to run Minetest in headless mode
             start_xvfb: Whether to start X server virtual framebuffer
             x_display: Display number to use for the X server virtual framebuffer
+            render_mode: Gymnasium render mode. Supports 'human' and 'rgb_array'.
         """
         self.unique_env_id = str(uuid.uuid4())
 
@@ -90,10 +96,12 @@ class Minetest(gym.Env):
         # Define Minetest paths
         self.start_xvfb = start_xvfb and self.headless
         self._set_artefact_dirs(
-            artefact_dir, world_dir, config_path
+            artefact_dir,
+            world_dir,
+            config_path,
         )  # Stores minetest artefacts and outputs
         self._set_minetest_dirs(
-            minetest_root
+            minetest_root,
         )  # Stores actual minetest dirs and executable
 
         # Whether to start minetest server and client
@@ -194,7 +202,11 @@ class Minetest(gym.Env):
         )
 
     def _set_graphics(
-        self, headless: bool, display_size: Tuple[int, int], fov: int, render_mode: str
+        self,
+        headless: bool,
+        display_size: Tuple[int, int],
+        fov: int,
+        render_mode: str,
     ):
         # gymnasium render mode
         self.render_mode = render_mode
@@ -210,7 +222,9 @@ class Minetest(gym.Env):
             # check for local install
             candidate_minetest_root = os.path.dirname(os.path.dirname(__file__))
             candidate_minetest_executable = os.path.join(
-                os.path.dirname(os.path.dirname(__file__)), "bin", "minetest"
+                os.path.dirname(os.path.dirname(__file__)),
+                "bin",
+                "minetest",
             )
             if os.path.isfile(candidate_minetest_executable):
                 self.minetest_root = candidate_minetest_root
@@ -219,13 +233,14 @@ class Minetest(gym.Env):
             # check for package install
             try:
                 candidate_minetest_executable = pkg_resources.resource_filename(
-                    __name__, os.path.join("minetest", "bin", "minetest")
+                    __name__,
+                    os.path.join("minetest", "bin", "minetest"),
                 )
                 if os.path.isfile(candidate_minetest_executable):
                     self.minetest_root = os.path.dirname(
-                        os.path.dirname(candidate_minetest_executable)
+                        os.path.dirname(candidate_minetest_executable),
                     )
-            except Exception as e:
+            except Exception as e:  # noqa: B902
                 logging.warning(f"Error loading resource file 'bin.minetest': {e}")
 
         if self.minetest_root is None:
@@ -233,11 +248,15 @@ class Minetest(gym.Env):
 
         if not self.start_xvfb and self.headless:
             self.minetest_executable = os.path.join(
-                self.minetest_root, "bin", "minetest_headless"
+                self.minetest_root,
+                "bin",
+                "minetest_headless",
             )
         else:
             self.minetest_executable = os.path.join(
-                self.minetest_root, "bin", "minetest"
+                self.minetest_root,
+                "bin",
+                "minetest",
             )
 
         self.cursor_image_path = os.path.join(
@@ -255,7 +274,8 @@ class Minetest(gym.Env):
         if config_path is None:
             self.clean_config = True
             self.config_path = os.path.join(
-                self.artefact_dir, f"{self.unique_env_id}.conf"
+                self.artefact_dir,
+                f"{self.unique_env_id}.conf",
             )
         else:
             self.clean_config = True
@@ -440,8 +460,21 @@ class Minetest(gym.Env):
         self.world_seed = self._np_random.integers(np.iinfo(np.int64).max)
 
     def reset(
-        self, seed: Optional[int] = None, options: Optional[Dict[str, Any]] = None
+        self,
+        seed: Optional[int] = None,
+        options: Optional[Dict[str, Any]] = None,
     ):
+        """Reset the environment.
+
+        Args:
+            seed: Seed for the environment.
+                  e.g. used for deriving seeds for world generation.
+            options: Currently unused.
+
+        Returns:
+            Tuple of inital observation and empty info dictionary.
+        """
+        del options
         self._seed(seed=seed)
         if self.start_minetest:
             if self.reset_world:
@@ -471,8 +504,8 @@ class Minetest(gym.Env):
             action: The action to perform.
 
         Returns:
-            The next observation, the reward, whether the episode is done, and
-            additional info.
+            The next observation, the reward, whether the episode is truncated,
+            or done, and additional info.
         """
         # Send action
         if isinstance(action["MOUSE"], np.ndarray):
@@ -502,7 +535,15 @@ class Minetest(gym.Env):
         logging.debug(f"Received obs - {next_obs.shape}; reward - {rew}; info - {info}")
         return next_obs, rew, done, False, {"minetest_info": info}
 
-    def render(self):
+    def render(self) -> Optional[np.ndarray]:
+        """Render the environment.
+
+        Returns:
+            Render image if `env.render_mode='rgb_array'`.
+
+        Raises:
+            NotImplementedError: if `env.render_mode` not in ['human', 'rgb_array'].
+        """
         if self.render_mode == "human":
             # TODO replace with pygame
             if self.render_img is None:
@@ -527,7 +568,7 @@ class Minetest(gym.Env):
             raise NotImplementedError(
                 "You are calling 'render()' with an unsupported"
                 f" render mode: '{self.render_mode}'. "
-                f"Supported modes: {self.metadata['render_modes']}"
+                f"Supported modes: {self.metadata['render_modes']}",
             )
 
     def close(self) -> None:

@@ -30,7 +30,8 @@ if __name__ == "__main__":
             )
             # Assign random timelimit to check that resets work properly
             env = TimeLimit(
-                env, max_episode_steps=random.randint(max_steps // 2, max_steps)
+                env,
+                max_episode_steps=random.randint(max_steps // 2, max_steps),
             )
             return env
 
