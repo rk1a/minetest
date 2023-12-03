@@ -26,7 +26,7 @@ setup(
         'psutil',
         'patchelf',
     ],
-    extras_require={"dev": DEV, "docs": DOCS}
+    extras_require={"dev": DEV, "docs": DOCS},
     package_data={
         'minetester': [
              'minetest/bin/minetest',
