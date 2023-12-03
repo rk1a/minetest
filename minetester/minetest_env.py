@@ -463,7 +463,7 @@ class Minetest(gym.Env):
         self,
         seed: Optional[int] = None,
         options: Optional[Dict[str, Any]] = None,
-    ):
+    ) -> Tuple[np.ndarray, Dict]:
         """Reset the environment.
 
         Args:

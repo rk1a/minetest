@@ -1,5 +1,5 @@
-Hello, Minetest(er)!
-====================
+Hello, Minetester!
+==================
 
 To get started with Minetester you should first know your way around the directory structure.
 The most important directories are these:

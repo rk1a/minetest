@@ -6,7 +6,7 @@ The API provided for controlling and reading out the Minetest client is based on
 - `Protocol Buffers <https://protobuf.dev/>`_
 - `ZeroMQ <https://zeromq.org/>`_
 
-Protbuf objects are used for serializing and deserializing the messages, that are being sent using ZeroMQ.
+Protobuf objects are used for serializing and deserializing the messages, that are being sent using ZeroMQ.
 
 Protobuf objects
 ----------------
