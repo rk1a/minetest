@@ -2,7 +2,6 @@
 	path = lib/irrlichtmt
 	url = https://github.com/EleutherAI/irrlicht.git 
 	branch = headless-rendering
-
 [submodule "lib/zmqpp"]
 	path = lib/zmqpp
 	url = https://github.com/zeromq/zmqpp.git
@@ -12,3 +11,4 @@
 [submodule "lib/SDL"]
 	path = lib/SDL
 	url = https://github.com/libsdl-org/SDL.git
+	branch = SDL2
