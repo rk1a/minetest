@@ -9,6 +9,6 @@
 	path = lib/zmqpp
 	url = https://github.com/zeromq/zmqpp.git
 [submodule "lib/irrlicht"]
-	path = lib/irrlichmt
+	path = lib/irrlichtmt
 	url = https://github.com/EleutherAI/irrlicht.git
 	branch = headless-rendering
