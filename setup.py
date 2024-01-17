@@ -1,6 +1,6 @@
 from setuptools import setup, find_packages
 
-DEV = ["pre-commit", "black", "isort", "flake8"]
+DEV = ["pre-commit", "black", "isort", "flake8", "pytest"]
 DOCS = [
     "sphinx==6.2.1",
     "sphinx_rtd_theme==1.2.2",
