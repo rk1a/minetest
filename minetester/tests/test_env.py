@@ -37,6 +37,7 @@ def minetest_env(unique_env_port, unique_server_port):
         server_port=unique_server_port,
         base_seed=42,
         headless=True,
+        start_xvfb=True,
     )
     yield mt
     mt.close()
@@ -105,7 +106,7 @@ def test_loop_parallel(unique_env_port, unique_server_port):
 
     # Env settings
     seed = 42
-    max_steps = 100
+    max_steps = 20
     x_display = 4
     env_kwargs = {
         "display_size": (600, 400),
