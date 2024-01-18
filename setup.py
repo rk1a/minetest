@@ -15,7 +15,7 @@ setup(
     version='0.0.1',
     description='Complex environments based on Minetest.',
     author='EleutherAI',
-    author_email='',
+    python_requires=">=3.8.0",
     packages=find_packages(),
     install_requires=[
         'gymnasium',
