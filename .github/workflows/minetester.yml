@@ -51,5 +51,5 @@ jobs:
         pre-commit run --all-files
     - name: Run tests
       run: |
-        pip install pytest
-        pytest
+        pip install pytest pytest-timeout
+        pytest --timeout=180
