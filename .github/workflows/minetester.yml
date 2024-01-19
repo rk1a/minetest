@@ -52,4 +52,5 @@ jobs:
     - name: Run tests
       run: |
         pip install pytest pytest-timeout
+        pip freeze
         pytest --timeout=180
