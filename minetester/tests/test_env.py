@@ -44,17 +44,16 @@ def minetest_env(unique_env_port, unique_server_port, request):
     mt.close()
 
 
-def test_reset(minetest_env):
-    """Tests reset return types."""
+def test_reset_step_returns(minetest_env):
+    """Test reset and step return types."""
     obs, info = minetest_env.reset()
     assert isinstance(obs, np.ndarray)
     assert isinstance(info, dict)
-
-
-def test_step(minetest_env):
-    """Tests step return types."""
-    obs, info = minetest_env.reset()
     action = minetest_env.action_space.sample()
+    assert isinstance(action, dict) and all(
+        isinstance(key, str) and isinstance(value, (int, np.int64, np.ndarray))
+        for key, value in action.items()
+    )
     obs, rew, done, truncated, info = minetest_env.step(action)
     assert isinstance(obs, np.ndarray)
     assert isinstance(rew, float)
