@@ -12,7 +12,7 @@ from minetester.utils import start_xserver
 
 
 @pytest.fixture
-def unique_env_port(request):
+def unique_env_port():
     """Create unique environment ports."""
     base_port = 5555
     unique_env_port.counter = getattr(unique_env_port, "counter", 0) + 1
@@ -21,7 +21,7 @@ def unique_env_port(request):
 
 
 @pytest.fixture
-def unique_server_port(request):
+def unique_server_port():
     """Create unique server ports."""
     base_port = 30000
     unique_server_port.counter = getattr(unique_server_port, "counter", 0) + 1
@@ -29,15 +29,16 @@ def unique_server_port(request):
     return port
 
 
-@pytest.fixture
-def minetest_env(unique_env_port, unique_server_port):
+@pytest.fixture(params=["xvfb", "sdl2"])
+def minetest_env(unique_env_port, unique_server_port, request):
     """Create Minetest environment."""
+    headless, start_xvfb = (True, True) if request.param == "xvfb" else (True, False)
     mt = Minetest(
         env_port=unique_env_port,
         server_port=unique_server_port,
         base_seed=42,
-        headless=True,
-        start_xvfb=True,
+        headless=headless,
+        start_xvfb=start_xvfb,
     )
     yield mt
     mt.close()
