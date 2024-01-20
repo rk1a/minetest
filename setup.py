@@ -23,7 +23,6 @@ setup(
         'matplotlib',
         'zmq',
         'protobuf==3.20.1',
-        'psutil',
         'patchelf',
     ],
     extras_require={"dev": DEV, "docs": DOCS},
