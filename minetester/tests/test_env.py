@@ -1,6 +1,6 @@
 """Tests for Minetest environment."""
 import random
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 import numpy as np
 import pytest
@@ -12,34 +12,28 @@ from minetester.utils import start_xserver
 
 
 @pytest.fixture
-def unique_env_port():
-    """Create unique environment ports."""
-    base_port = 5555
-    unique_env_port.counter = getattr(unique_env_port, "counter", 0) + 1
-    port = base_port + unique_env_port.counter
-    return port
-
-
-@pytest.fixture
-def unique_server_port():
-    """Create unique server ports."""
-    base_port = 30000
-    unique_server_port.counter = getattr(unique_server_port, "counter", 0) + 1
-    port = base_port + unique_server_port.counter
-    return port
+def unused_display():
+    """Create unique display variable."""
+    base_display = 2
+    unused_display.counter = getattr(unused_display, "counter", 0) + 1
+    display = base_display + unused_display.counter
+    return display
 
 
 @pytest.fixture(params=["xvfb", "sdl2"])
-def minetest_env(unique_env_port, unique_server_port, request):
+def minetest_env(unused_tcp_port_factory, unused_display, request):
     """Create Minetest environment."""
+    env_port, server_port = unused_tcp_port_factory(), unused_tcp_port_factory()
     headless, start_xvfb = (True, True) if request.param == "xvfb" else (True, False)
     mt = Minetest(
-        env_port=unique_env_port,
-        server_port=unique_server_port,
+        env_port=env_port,
+        server_port=server_port,
         base_seed=42,
         headless=headless,
         start_xvfb=start_xvfb,
+        x_display=unused_display,
     )
+    print(mt.env_port, mt.server_port, mt.x_display)
     yield mt
     mt.close()
 
@@ -71,30 +65,29 @@ def test_loop(minetest_env):
     while not (done or truncated):
         action = minetest_env.action_space.sample()
         _, _, done, truncated, _ = minetest_env.step(action)
-        print(done, truncated)
 
 
-def test_loop_parallel(unique_env_port, unique_server_port):
+def test_loop_parallel(unused_display, unused_tcp_port_factory):
     """Execution test of parallel step-action-loops."""
 
     def _make_env(
         rank: int,
-        seed: int = 0,
-        max_steps: int = 1e9,
-        env_kwargs: Optional[Dict[str, Any]] = None,
+        seed: int,
+        max_steps: int,
+        env_kwargs: Dict[str, Any],
     ):
-        env_kwargs = env_kwargs or {}
-
         def _init():
             # Make sure that each Minetest instance has
             # - different server and client ports
-            # - different and deterministic seeds
+            # - different and seeds
+            env_port, server_port = unused_tcp_port_factory(), unused_tcp_port_factory()
             env = Minetest(
-                env_port=unique_env_port + rank,
-                server_port=unique_server_port + rank,
+                env_port=env_port,
+                server_port=server_port,
                 base_seed=seed + rank,
                 **env_kwargs,
             )
+            print(env.env_port, env.server_port, env.x_display)
             # Assign random timelimit to check that resets work properly
             env = TimeLimit(
                 env,
@@ -107,7 +100,7 @@ def test_loop_parallel(unique_env_port, unique_server_port):
     # Env settings
     seed = 42
     max_steps = 20
-    x_display = 4
+    x_display = unused_display
     env_kwargs = {
         "display_size": (600, 400),
         "fov": 72,
@@ -125,14 +118,11 @@ def test_loop_parallel(unique_env_port, unique_server_port):
         ],
     )
 
-    # Start X server
-    xserver = start_xserver(x_display)
-
     # Start loop
+    xserver = start_xserver(x_display)
     venv.reset()
     step = 0
     while step < max_steps:
-        print(f"Elapsed steps: {venv.get_attr('_elapsed_steps')}")
         actions = venv.action_space.sample()
         venv.step(actions)
         step += 1
