@@ -1,4 +1,5 @@
 """Tests for Minetest environment."""
+import os
 import random
 from typing import Any, Dict
 
@@ -14,14 +15,23 @@ from minetester.utils import start_xserver
 @pytest.fixture
 def unused_display():
     """Create unique display variable."""
-    base_display = 2
+    base_display = os.getpid()
     unused_display.counter = getattr(unused_display, "counter", 0) + 1
     display = base_display + unused_display.counter
     return display
 
 
+@pytest.fixture
+def unused_display2():
+    for servernum in range(0, 65536):
+        if os.path.exists("/tmp/.X{0}-lock".format(servernum)):
+            continue
+        else:
+            return servernum
+
+
 @pytest.fixture(params=["sdl2", "xvfb"])
-def minetest_env(unused_tcp_port_factory, unused_display, request):
+def minetest_env(unused_display, unused_tcp_port_factory, request):
     """Create Minetest environment."""
     env_port, server_port = unused_tcp_port_factory(), unused_tcp_port_factory()
     headless, start_xvfb = (True, True) if request.param == "xvfb" else (True, False)

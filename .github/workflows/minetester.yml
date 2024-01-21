@@ -34,8 +34,8 @@ jobs:
       run: make zmqpp
     - name: Create Protobuf files
       run: make proto
-    - name: Build irrlicht
-      run: bash util/minetester/build_irrlicht.sh
+    # - name: Build irrlicht
+    #  run: bash util/minetester/build_irrlicht.sh
     - name: Build minetest binary
       run: make minetest
     - name: Build minetester wheel
