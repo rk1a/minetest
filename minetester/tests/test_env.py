@@ -20,7 +20,7 @@ def unused_display():
     return display
 
 
-@pytest.fixture(params=["xvfb", "sdl2"])
+@pytest.fixture(params=["sdl2", "xvfb"])
 def minetest_env(unused_tcp_port_factory, unused_display, request):
     """Create Minetest environment."""
     env_port, server_port = unused_tcp_port_factory(), unused_tcp_port_factory()
