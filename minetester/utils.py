@@ -1,6 +1,9 @@
 """Utility functions for Minetester."""
+import codecs
 import os
 import subprocess
+import time
+from tempfile import mkdtemp
 from typing import Any, Dict, Optional, Tuple
 
 import numpy as np
@@ -257,15 +260,56 @@ def start_xserver(
 
     Returns:
         The X server process.
+
+    Raises:
+        RuntimeError: If X server fails to start or already exists.
     """
+    display = f":{display_idx}"
+    tmpdir = mkdtemp(prefix="XvfbServer.")
     cmd = [
         "Xvfb",
-        f":{display_idx}",
+        display,
+        "-fbdir",
+        tmpdir,
         "-screen",
         "0",  # screennum param
         f"{display_size[0]}x{display_size[1]}x{display_depth}",
     ]
-    xserver_process = subprocess.Popen(cmd)
+    authfile = os.path.join(tmpdir, "Xauthority." + display)
+    mcookie = codecs.encode(os.urandom(16), "hex_codec")
+    subprocess.check_call(["xauth", "-f", authfile, "add", display, ".", mcookie])
+    errfile = os.path.join(tmpdir, "Xvfb." + display + ".err")
+    with open(errfile, "w") as f:  # use a file instead of a pipe to simplify polling
+        xserver_process = subprocess.Popen(
+            cmd,
+            stderr=f,
+            env=dict(os.environ, XAUTHORITY=authfile),
+        )
+        fbmem = os.path.join(tmpdir, "Xvfb_screen0")
+        # Wait for Xvfb server to start
+        while not os.path.exists(fbmem):
+            if xserver_process.poll() is not None:
+                break
+            time.sleep(0.1)
+            print("Wait...")
+        else:
+            xserver_process.poll()
+        if xserver_process.returncode is not None:
+            with open(errfile) as f:
+                err = f.read()
+            if "Server is already active for display" in err:
+                raise RuntimeError(
+                    "Server already active for this display.",
+                    xserver_process.returncode,
+                    err,
+                )
+            else:
+                raise RuntimeError(
+                    "Failed to start Xvfb",
+                    xserver_process.returncode,
+                    err,
+                )
+    print("Xvfb started in " + tmpdir)  # for debugging
     return xserver_process
 
 
