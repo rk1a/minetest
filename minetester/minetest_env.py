@@ -591,17 +591,3 @@ class Minetest(gym.Env):
             self._delete_world()
         if self.clean_config:
             self._delete_config()
-
-        log_file_paths = [
-            log_file_path
-            for log_file_path in os.listdir(self.log_dir)
-            if os.path.isfile(os.path.join(self.log_dir, log_file_path))
-            and log_file_path.endswith(f"{self.unique_env_id}.log")
-        ]
-        for log_file_path in log_file_paths:
-            print("-" * 100)
-            print(log_file_path)
-            print("-" * 100)
-            with open(os.path.join(self.log_dir, log_file_path), "r") as f:
-                for line in f.readlines():
-                    print(line.rstrip("\n"))
