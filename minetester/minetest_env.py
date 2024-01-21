@@ -168,16 +168,15 @@ class Minetest(gym.Env):
             self._enable_servermods()
 
         # Start X server virtual frame buffer
+        # TODO automatically choose available X display/server number
         self.default_display = x_display or 0
         if "DISPLAY" in os.environ:
             self.default_display = int(os.environ["DISPLAY"].split(":")[1])
-            print(f"Default display = {self.default_display}")
         self.x_display = x_display or self.default_display
-        print(f"Using display = {self.x_display}")
         self.xserver_process = None
         if self.start_xvfb:
             self.x_display = x_display or self.default_display + 4
-            print(f"Starting server for X display = {self.x_display}")
+            logging.info(f"Starting Xvfb server with number = {self.x_display}")
             self.xserver_process = start_xserver(self.x_display, self.display_size)
 
     def _configure_spaces(self):

@@ -1,5 +1,4 @@
 """Utility functions for Minetester."""
-import codecs
 import os
 import subprocess
 import time
@@ -253,6 +252,10 @@ def start_xserver(
 ) -> subprocess.Popen:
     """Start a virtual framebuffer X server.
 
+    Adapted from:
+    https://github.com/man-group/pytest-plugins/blob/master/
+    pytest-server-fixtures/pytest_server_fixtures/xvfb.py#L38
+
     Args:
         display_idx: Value of the DISPLAY variable.
         display_size: Size of the display.
@@ -274,16 +277,17 @@ def start_xserver(
         "-screen",
         "0",  # screennum param
         f"{display_size[0]}x{display_size[1]}x{display_depth}",
+        "-nolisten",
+        "tcp",
+        "-reset",
+        "-terminate",
     ]
-    authfile = os.path.join(tmpdir, "Xauthority." + display)
-    mcookie = codecs.encode(os.urandom(16), "hex_codec")
-    subprocess.check_call(["xauth", "-f", authfile, "add", display, ".", mcookie])
     errfile = os.path.join(tmpdir, "Xvfb." + display + ".err")
     with open(errfile, "w") as f:  # use a file instead of a pipe to simplify polling
         xserver_process = subprocess.Popen(
             cmd,
             stderr=f,
-            env=dict(os.environ, XAUTHORITY=authfile),
+            env=os.environ,
         )
         fbmem = os.path.join(tmpdir, "Xvfb_screen0")
         # Wait for Xvfb server to start
@@ -291,25 +295,24 @@ def start_xserver(
             if xserver_process.poll() is not None:
                 break
             time.sleep(0.1)
-            print("Wait...")
         else:
             xserver_process.poll()
         if xserver_process.returncode is not None:
             with open(errfile) as f:
                 err = f.read()
-            if "Server is already active for display" in err:
+            already_active = "Server is already active for display"
+            if already_active in err:
                 raise RuntimeError(
-                    "Server already active for this display.",
+                    already_active,
                     xserver_process.returncode,
                     err,
                 )
             else:
                 raise RuntimeError(
-                    "Failed to start Xvfb",
+                    "Failed to start Xvfb server",
                     xserver_process.returncode,
                     err,
                 )
-    print("Xvfb started in " + tmpdir)  # for debugging
     return xserver_process
 
 

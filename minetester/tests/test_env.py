@@ -13,16 +13,8 @@ from minetester.utils import start_xserver
 
 
 @pytest.fixture
-def unused_display():
-    """Create unique display variable."""
-    base_display = os.getpid()
-    unused_display.counter = getattr(unused_display, "counter", 0) + 1
-    display = base_display + unused_display.counter
-    return display
-
-
-@pytest.fixture
-def unused_display2():
+def unused_xserver_number():
+    """Get unused X server number."""
     for servernum in range(0, 65536):
         if os.path.exists("/tmp/.X{0}-lock".format(servernum)):
             continue
@@ -30,8 +22,8 @@ def unused_display2():
             return servernum
 
 
-@pytest.fixture(params=["sdl2", "xvfb"])
-def minetest_env(unused_display, unused_tcp_port_factory, request):
+@pytest.fixture(params=["xvfb", "sdl2"])
+def minetest_env(unused_xserver_number, unused_tcp_port_factory, request):
     """Create Minetest environment."""
     env_port, server_port = unused_tcp_port_factory(), unused_tcp_port_factory()
     headless, start_xvfb = (True, True) if request.param == "xvfb" else (True, False)
@@ -41,9 +33,8 @@ def minetest_env(unused_display, unused_tcp_port_factory, request):
         base_seed=42,
         headless=headless,
         start_xvfb=start_xvfb,
-        x_display=unused_display,
+        x_display=unused_xserver_number,
     )
-    print(mt.env_port, mt.server_port, mt.x_display)
     yield mt
     mt.close()
 
@@ -77,7 +68,7 @@ def test_loop(minetest_env):
         _, _, done, truncated, _ = minetest_env.step(action)
 
 
-def test_loop_parallel(unused_display, unused_tcp_port_factory):
+def test_loop_parallel(unused_xserver_number, unused_tcp_port_factory):
     """Execution test of parallel step-action-loops."""
 
     def _make_env(
@@ -89,7 +80,7 @@ def test_loop_parallel(unused_display, unused_tcp_port_factory):
         def _init():
             # Make sure that each Minetest instance has
             # - different server and client ports
-            # - different and seeds
+            # - different seeds
             env_port, server_port = unused_tcp_port_factory(), unused_tcp_port_factory()
             env = Minetest(
                 env_port=env_port,
@@ -97,7 +88,6 @@ def test_loop_parallel(unused_display, unused_tcp_port_factory):
                 base_seed=seed + rank,
                 **env_kwargs,
             )
-            print(env.env_port, env.server_port, env.x_display)
             # Assign random timelimit to check that resets work properly
             env = TimeLimit(
                 env,
@@ -110,12 +100,11 @@ def test_loop_parallel(unused_display, unused_tcp_port_factory):
     # Env settings
     seed = 42
     max_steps = 20
-    x_display = unused_display
     env_kwargs = {
         "display_size": (600, 400),
         "fov": 72,
         "headless": True,
-        "x_display": x_display,
+        "x_display": unused_xserver_number,
     }
 
     # Create a vectorized environment
@@ -129,7 +118,7 @@ def test_loop_parallel(unused_display, unused_tcp_port_factory):
     )
 
     # Start loop
-    xserver = start_xserver(x_display)
+    xserver = start_xserver(unused_xserver_number)
     venv.reset()
     step = 0
     while step < max_steps:
