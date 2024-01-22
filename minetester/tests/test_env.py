@@ -1,25 +1,17 @@
 """Tests for Minetest environment."""
-import os
 import random
 from typing import Any, Dict
 
+import gymnasium as gym
 import numpy as np
 import pytest
-from gymnasium.vector import AsyncVectorEnv
+from gymnasium.utils.env_checker import check_env
+from gymnasium.vector import AsyncVectorEnv, SyncVectorEnv
 from gymnasium.wrappers import TimeLimit
 
+import minetester  # noqa: F401
 from minetester import Minetest
 from minetester.utils import start_xserver
-
-
-@pytest.fixture
-def unused_xserver_number():
-    """Get unused X server number."""
-    for servernum in range(0, 65536):
-        if os.path.exists("/tmp/.X{0}-lock".format(servernum)):
-            continue
-        else:
-            return servernum
 
 
 @pytest.fixture(params=["xvfb", "sdl2"])
@@ -39,8 +31,8 @@ def minetest_env(unused_xserver_number, unused_tcp_port_factory, request):
     mt.close()
 
 
-def test_reset_step_returns(minetest_env):
-    """Test reset and step return types."""
+def test_first_transition(minetest_env):
+    """Test first transition."""
     obs, info = minetest_env.reset()
     assert isinstance(obs, np.ndarray)
     assert isinstance(info, dict)
@@ -68,8 +60,9 @@ def test_loop(minetest_env):
         _, _, done, truncated, _ = minetest_env.step(action)
 
 
-def test_loop_parallel(unused_xserver_number, unused_tcp_port_factory):
-    """Execution test of parallel step-action-loops."""
+@pytest.mark.parametrize("vec_env_cls", [AsyncVectorEnv, SyncVectorEnv])
+def test_loop_vec_env(vec_env_cls, unused_xserver_number, unused_tcp_port_factory):
+    """Execution test of vectorized step-action-loop."""
 
     def _make_env(
         rank: int,
@@ -109,7 +102,6 @@ def test_loop_parallel(unused_xserver_number, unused_tcp_port_factory):
 
     # Create a vectorized environment
     num_envs = 2  # Number of envs to use (<= number of avail. cpus)
-    vec_env_cls = AsyncVectorEnv
     venv = vec_env_cls(
         [
             _make_env(rank=i, seed=seed, max_steps=max_steps, env_kwargs=env_kwargs)
@@ -127,3 +119,20 @@ def test_loop_parallel(unused_xserver_number, unused_tcp_port_factory):
         step += 1
     venv.close()
     xserver.terminate()
+
+
+def test_gynasium_api(unused_tcp_port_factory):
+    env_port = unused_tcp_port_factory()
+    server_port = unused_tcp_port_factory()
+    env = gym.make(
+        "Minetest-v0",
+        env_port=env_port,
+        server_port=server_port,
+        headless=True,
+        start_xvfb=False,
+    )
+    # Note: render check is skipped because it creates
+    # a new environment for each render_mode without incrementing
+    # the environment and server ports
+    # TODO implement automatic port incrementation and check render
+    check_env(env, skip_render_check=True)

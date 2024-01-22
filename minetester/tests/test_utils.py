@@ -1,10 +1,11 @@
 """Tests for utilities."""
 import os
 import tempfile
+import time
 
 import pytest
 
-from minetester.utils import read_config_file, write_config_file
+from minetester.utils import read_config_file, start_xserver, write_config_file
 
 
 @pytest.fixture
@@ -23,3 +24,13 @@ def test_read_write_config(minetest_config_path):
         write_config_file(f.name, config)
         assert os.path.exists(f.name)
         assert read_config_file(f.name) == config
+
+
+def test_start_xserver(unused_xserver_number):
+    """Test starting Xvfb server."""
+    process = start_xserver(unused_xserver_number)
+    assert process.poll() is None
+    assert os.path.exists("/tmp/.X{0}-lock".format(unused_xserver_number))
+    process.terminate()
+    time.sleep(1)
+    assert not os.path.exists("/tmp/.X{0}-lock".format(unused_xserver_number))
