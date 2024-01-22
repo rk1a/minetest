@@ -121,7 +121,7 @@ def test_loop_vec_env(vec_env_cls, unused_xserver_number, unused_tcp_port_factor
     xserver.terminate()
 
 
-def test_gynasium_api(unused_tcp_port_factory):
+def test_gymnasium_api(unused_tcp_port_factory):
     env_port = unused_tcp_port_factory()
     server_port = unused_tcp_port_factory()
     env = gym.make(
