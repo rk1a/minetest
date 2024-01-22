@@ -53,4 +53,4 @@ jobs:
       run: |
         pip install pytest pytest-timeout pytest-asyncio
         pip freeze
-        pytest -vs --timeout=180
+        pytest -vs --timeout=180 --cov=minetester --cov-report term-missing:skip-covered
