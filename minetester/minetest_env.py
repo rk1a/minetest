@@ -309,7 +309,7 @@ class Minetest(gym.Env):
                 if not os.path.exists(clientmod_folder):
                     logging.warning(
                         f"Client mod {clientmod} was not found!"
-                        " It must be located at {clientmod_folder}.",
+                        f" It must be located at {clientmod_folder}.",
                     )
                 else:
                     mods_config.write(f"load_mod_{clientmod} = true\n")
