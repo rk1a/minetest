@@ -2,14 +2,18 @@ name: Build and test Minetester
 
 on:
   push:
-    branches: [ "develop" ]
-  pull_request:
-    branches: [ "develop" ]
+    branches:
+      - '**'
+    tags:
+      - 'v**'
+    paths:
+      - '**'
   workflow_dispatch:
 
 jobs:
-  build:
 
+  build:
+    name: Build and test pipeline
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -54,3 +58,32 @@ jobs:
         pip install pytest pytest-timeout pytest-asyncio pytest-cov
         pip freeze
         pytest -vs --timeout=180 --cov=minetester --cov-report term-missing:skip-covered
+    - name: Store the distribution packages
+      uses: actions/upload-artifact@v3
+      with:
+        name: python-package-distributions
+        path: build/package/dist/
+  
+  publish-to-testpypi:
+    name: Publish Python distribution packages to TestPyPI
+    needs:
+    - build
+    runs-on: ubuntu-latest
+
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/p/minetester
+
+    permissions:
+      id-token: write  # IMPORTANT: mandatory for trusted publishing
+
+    steps:
+    - name: Download all the dists
+      uses: actions/download-artifact@v3
+      with:
+        name: python-package-distributions
+        path: dist/
+    - name: Publish distribution packages to TestPyPI
+      uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        repository-url: https://test.pypi.org/legacy/
