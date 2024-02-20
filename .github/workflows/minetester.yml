@@ -62,7 +62,7 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: python-package-distributions
-        path: build/package/dist/
+        path: build/package/wheel/
   
   publish-to-testpypi:
     name: Publish Python distribution packages to TestPyPI
