@@ -1,4 +1,5 @@
 from setuptools import setup, find_packages
+from pathlib import Path
 
 DEV = ["pre-commit", "black", "isort", "flake8", "pytest", "pytest-asyncio"]
 DOCS = [
@@ -9,11 +10,15 @@ DOCS = [
     "sphinx_copybutton",
     "myst_parser",
 ]
+repo_dir = Path(__file__).parent
+readme = (repo_dir / "README.md").read_text()
 
 setup(
     name='minetester',
     version='0.0.1',
     description='Complex environments based on Minetest.',
+    long_description=readme,
+    long_description_content_type='text/markdown'
     author='EleutherAI',
     python_requires=">=3.8.0",
     packages=find_packages(),
