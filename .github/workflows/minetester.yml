@@ -79,7 +79,7 @@ jobs:
 
     steps:
     - name: Download all the dists
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         pattern: dist-python*
         merge-multiple: true
