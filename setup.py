@@ -18,7 +18,7 @@ setup(
     version='0.0.1',
     description='Complex environments based on Minetest.',
     long_description=readme,
-    long_description_content_type='text/markdown'
+    long_description_content_type='text/markdown',
     author='EleutherAI',
     python_requires=">=3.8.0",
     packages=find_packages(),
