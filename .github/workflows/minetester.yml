@@ -61,7 +61,7 @@ jobs:
     - name: Store the distribution packages
       uses: actions/upload-artifact@v4
       with:
-        name: python-package-distributions
+        name: python${{ matrix.python-version }}-package-distributions
         path: build/package/wheel/
   
   publish-to-testpypi:
@@ -81,7 +81,7 @@ jobs:
     - name: Download all the dists
       uses: actions/download-artifact@v3
       with:
-        name: python-package-distributions
+        name: python3.8-package-distributions
         path: dist/
     - name: Publish distribution packages to TestPyPI
       uses: pypa/gh-action-pypi-publish@release/v1
