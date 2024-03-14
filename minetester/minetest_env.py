@@ -90,9 +90,6 @@ class Minetest(gym.Env):
         # Graphics settings
         self._set_graphics(headless, display_size, fov, render_mode)
 
-        # Define action and observation space
-        self._configure_spaces()
-
         # Define Minetest paths
         self.start_xvfb = start_xvfb and self.headless
         self._set_artefact_dirs(
@@ -140,6 +137,9 @@ class Minetest(gym.Env):
         self.reseed_on_reset = world_seed is None
         self._seed(self.base_seed)
 
+        # Define action and observation space
+        self._configure_spaces()
+
         # Write minetest.conf
         self.config_dict = config_dict
         self._write_config()
@@ -168,6 +168,7 @@ class Minetest(gym.Env):
             self._enable_servermods()
 
         # Start X server virtual frame buffer
+        # TODO automatically choose available X display/server number
         self.default_display = x_display or 0
         if "DISPLAY" in os.environ:
             self.default_display = int(os.environ["DISPLAY"].split(":")[1])
@@ -175,6 +176,7 @@ class Minetest(gym.Env):
         self.xserver_process = None
         if self.start_xvfb:
             self.x_display = x_display or self.default_display + 4
+            logging.info(f"Starting Xvfb server with number = {self.x_display}")
             self.xserver_process = start_xserver(self.x_display, self.display_size)
 
     def _configure_spaces(self):
@@ -193,12 +195,14 @@ class Minetest(gym.Env):
                     ),
                 },
             },
+            seed=self.base_seed,
         )
         self.observation_space = gym.spaces.Box(
             0,
             255,
             shape=(self.display_size[1], self.display_size[0], 3),
             dtype=np.uint8,
+            seed=self.base_seed,
         )
 
     def _set_graphics(
@@ -307,7 +311,7 @@ class Minetest(gym.Env):
                 if not os.path.exists(clientmod_folder):
                     logging.warning(
                         f"Client mod {clientmod} was not found!"
-                        " It must be located at {clientmod_folder}.",
+                        f" It must be located at {clientmod_folder}.",
                     )
                 else:
                     mods_config.write(f"load_mod_{clientmod} = true\n")
@@ -441,7 +445,7 @@ class Minetest(gym.Env):
         if os.path.exists(self.config_path):
             config.update(read_config_file(self.config_path))
         # Seed the map generator if not using a custom map
-        if self.world_seed:
+        if self.world_seed is not None:
             config.update(fixed_map_seed=self.world_seed)
         # Set from custom config dict
         config.update(self.config_dict)

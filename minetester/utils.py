@@ -1,6 +1,8 @@
 """Utility functions for Minetester."""
 import os
 import subprocess
+import time
+from tempfile import mkdtemp
 from typing import Any, Dict, Optional, Tuple
 
 import numpy as np
@@ -250,6 +252,10 @@ def start_xserver(
 ) -> subprocess.Popen:
     """Start a virtual framebuffer X server.
 
+    Adapted from:
+    https://github.com/man-group/pytest-plugins/blob/master/
+    pytest-server-fixtures/pytest_server_fixtures/xvfb.py#L38
+
     Args:
         display_idx: Value of the DISPLAY variable.
         display_size: Size of the display.
@@ -257,15 +263,56 @@ def start_xserver(
 
     Returns:
         The X server process.
+
+    Raises:
+        RuntimeError: If X server fails to start or already exists.
     """
+    display = f":{display_idx}"
+    tmpdir = mkdtemp(prefix="XvfbServer.")
     cmd = [
         "Xvfb",
-        f":{display_idx}",
+        display,
+        "-fbdir",
+        tmpdir,
         "-screen",
         "0",  # screennum param
         f"{display_size[0]}x{display_size[1]}x{display_depth}",
+        "-nolisten",
+        "tcp",
+        "-reset",
+        "-terminate",
     ]
-    xserver_process = subprocess.Popen(cmd)
+    errfile = os.path.join(tmpdir, "Xvfb." + display + ".err")
+    with open(errfile, "w") as f:  # use a file instead of a pipe to simplify polling
+        xserver_process = subprocess.Popen(
+            cmd,
+            stderr=f,
+            env=os.environ,
+        )
+        fbmem = os.path.join(tmpdir, "Xvfb_screen0")
+        # Wait for Xvfb server to start
+        while not os.path.exists(fbmem):
+            if xserver_process.poll() is not None:
+                break
+            time.sleep(0.1)
+        else:
+            xserver_process.poll()
+        if xserver_process.returncode is not None:
+            with open(errfile) as f:
+                err = f.read()
+            already_active = "Server is already active for display"
+            if already_active in err:
+                raise RuntimeError(
+                    already_active,
+                    xserver_process.returncode,
+                    err,
+                )
+            else:
+                raise RuntimeError(
+                    "Failed to start Xvfb server",
+                    xserver_process.returncode,
+                    err,
+                )
     return xserver_process
 
 

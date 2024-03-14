@@ -1,6 +1,6 @@
 from setuptools import setup, find_packages
 
-DEV = ["pre-commit", "black", "isort", "flake8"]
+DEV = ["pre-commit", "black", "isort", "flake8", "pytest", "pytest-asyncio"]
 DOCS = [
     "sphinx==6.2.1",
     "sphinx_rtd_theme==1.2.2",
@@ -14,8 +14,10 @@ setup(
     name='minetester',
     version='0.0.1',
     description='Complex environments based on Minetest.',
+    long_description='Complex environments based on Minetest.',
+    long_description_content_type='text/markdown',
     author='EleutherAI',
-    author_email='',
+    python_requires=">=3.8.0",
     packages=find_packages(),
     install_requires=[
         'gymnasium',
@@ -23,7 +25,6 @@ setup(
         'matplotlib',
         'zmq',
         'protobuf==3.20.1',
-        'psutil',
         'patchelf',
     ],
     extras_require={"dev": DEV, "docs": DOCS},

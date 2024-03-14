@@ -39,4 +39,4 @@ repos:
       - flake8-commas~=2.1.0
       - flake8-debugger~=4.1.2
       - flake8-docstrings~=1.6.0
-    files: ^minetester/.*$
+    files: ^minetester/(?!(tests)/).*\.py$
