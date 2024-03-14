@@ -1,6 +1,7 @@
 [![Documentation Status](https://readthedocs.org/projects/minetester/badge/?version=latest)](https://minetester.readthedocs.io/en/latest/?badge=latest)
 ![Build Pipeline Status](https://github.com/rk1a/minetest/actions/workflows/minetester.yml/badge.svg)
 [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit)](https://github.com/pre-commit/pre-commit)
+[![PyPI version](https://badge.fury.io/py/mintetester.svg)](https://badge.fury.io/py/minetester)
 
 EleutherAI Alignment Minetest
 =============================
